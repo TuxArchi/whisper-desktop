@@ -31,12 +31,15 @@ pub fn detect() -> HardwareReport {
     if let Some(nv) = &nvidia {
         let reported = nv.vram_mb;
         let name_hint = nv.name.clone();
+        // Read before the mutable borrow: `gpus.len()` inside the loop would
+        // borrow the vector again.
+        let single_gpu = gpus.len() == 1;
         for gpu in gpus.iter_mut().filter(|g| g.vendor == GpuVendor::Nvidia) {
             let matches = match (&name_hint, &gpu.name) {
                 (Some(a), Some(b)) => names_match(a, b),
                 _ => true,
             };
-            if matches || gpus.len() == 1 {
+            if matches || single_gpu {
                 if let Some(vram) = reported {
                     gpu.vram_mb = Some(vram);
                     gpu.vram_source = Some("nvidia-smi".to_string());
