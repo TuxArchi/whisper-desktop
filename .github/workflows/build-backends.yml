@@ -98,8 +98,10 @@ jobs:
       - name: Build
         working-directory: whisper.cpp
         run: |
-          # The devel image has the driver stub but does not link against it.
-          export LIBRARY_PATH="/usr/local/cuda/lib64/stubs:${LIBRARY_PATH:-}"
+          # The devel image ships the driver stub but the linker does not look
+          # there, so every cuMem*/cuDevice* symbol stays undefined.
+          ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/lib/x86_64-linux-gnu/libcuda.so
+          ldconfig
           bash ../scripts/build-backend.sh cuda "$WHISPER_VERSION" ../release
 
       - uses: actions/upload-artifact@v4
@@ -126,7 +128,10 @@ jobs:
 
       - name: Build
         working-directory: whisper.cpp
-        run: bash ../scripts/build-backend.sh rocm "$WHISPER_VERSION" ../release
+        run: |
+          # CMake cannot find HIP unless the toolchain is on PATH.
+          export PATH="/opt/rocm/bin:/opt/rocm/llvm/bin:${PATH}"
+          bash ../scripts/build-backend.sh rocm "$WHISPER_VERSION" ../release
 
       - uses: actions/upload-artifact@v4
         with:
@@ -269,4 +274,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/catalog.json docs/catalog.json.sig
           git diff --cached --quiet || git commit -m "chore: catálogo firmado desde $RELEASE_TAG"
+          # main may have moved while the builds were running: rebase, then
+          # retry the push.
+          git pull --rebase --autostash origin main
           git push
