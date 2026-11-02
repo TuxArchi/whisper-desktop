@@ -184,6 +184,10 @@ jobs:
     name: catalog + release
     runs-on: ubuntu-22.04
     needs: [linux, linux-cuda, windows, ffmpeg]
+    # A skipped job in `needs` skips the dependent one; the catalogue must run
+    # as long as the Linux build and ffmpeg succeeded, even if the optional
+    # platforms were disabled or failed.
+    if: always() && needs.linux.result == 'success' && needs.ffmpeg.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
