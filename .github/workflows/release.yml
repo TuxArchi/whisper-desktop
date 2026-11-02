@@ -105,8 +105,9 @@ jobs:
           mkdir -p stage
           cp bin/whisper-desktop stage/
           chmod +x stage/whisper-desktop
-          cp LICENSE THIRD-PARTY.md stage/
+          cp LICENSE THIRD-PARTY.md NOTICES.md stage/
           cp packaging/icons/256x256/whisper-desktop.png stage/
+          mkdir -p stage/licenses && cp packaging/licenses/* stage/licenses/
           VERSION="${GITHUB_REF_NAME#v}"
           bash scripts/make-run.sh stage "$VERSION" release
 

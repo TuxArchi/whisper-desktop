@@ -40,4 +40,6 @@ package() {
         "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
     install -Dm644 "$srcdir/THIRD-PARTY.md" \
         "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY.md"
+    install -Dm644 "$srcdir/NOTICES.md" \
+        "$pkgdir/usr/share/licenses/$pkgname/NOTICES.md"
 }

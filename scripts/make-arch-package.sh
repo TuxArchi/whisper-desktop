@@ -25,7 +25,7 @@ stage="$work/stage"
 mkdir -p "$stage"
 
 cp "$bindir/whisper-desktop" "$stage/"
-cp "$root/LICENSE" "$root/THIRD-PARTY.md" "$stage/"
+cp "$root/LICENSE" "$root/THIRD-PARTY.md" "$root/NOTICES.md" "$stage/"
 cp "$root/packaging/whisper-desktop.desktop" "$stage/"
 cp "$root/packaging/icons/256x256/whisper-desktop.png" "$stage/"
 

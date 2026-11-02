@@ -184,18 +184,23 @@ jobs:
           base="https://github.com/BtbN/FFmpeg-Builds/releases/download/${FFMPEG_TAG}"
           mkdir -p release work
 
+          # The LGPL text and the source offer must travel with the binary:
+          # the user ends up with bin/ffmpeg on disk and nothing else.
           curl -fL "$base/ffmpeg-master-latest-win64-lgpl.zip" -o work/win.zip
           unzip -q work/win.zip -d work/win
           mkdir -p work/stage-win/bin
           find work/win -name ffmpeg.exe -exec cp {} work/stage-win/bin/ffmpeg.exe \;
+          find work/win -name 'LICENSE.txt' -exec cp {} work/stage-win/LICENSE.ffmpeg.txt \;
+          cp packaging/licenses/LGPL-3.0-ffmpeg.txt packaging/licenses/FFMPEG-SOURCE.txt work/stage-win/
           (cd work/stage-win && zip -qr ../../release/ffmpeg-lgpl-win64.zip .)
-          cp work/win/LICENSE.txt release/LICENSE.ffmpeg.txt 2>/dev/null || true
 
           curl -fL "$base/ffmpeg-master-latest-linux64-lgpl.tar.xz" -o work/linux.tar.xz
           tar -xJf work/linux.tar.xz -C work --one-top-level=linux
           mkdir -p work/stage-linux/bin
           find work/linux -name ffmpeg -type f -exec cp {} work/stage-linux/bin/ffmpeg \;
           chmod +x work/stage-linux/bin/ffmpeg
+          find work/linux -name 'LICENSE.txt' -exec cp {} work/stage-linux/LICENSE.ffmpeg.txt \;
+          cp packaging/licenses/LGPL-3.0-ffmpeg.txt packaging/licenses/FFMPEG-SOURCE.txt work/stage-linux/
           tar -C work/stage-linux -czf release/ffmpeg-lgpl-linux64.tar.gz .
 
       - uses: actions/upload-artifact@v4

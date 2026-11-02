@@ -102,6 +102,11 @@ La GUI (Tauri + React) se añade en la siguiente fase; ver [`docs/BUILDING.md`](
 
 Motor: [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT) ·
 Modelos: [OpenAI Whisper](https://github.com/openai/whisper) (MIT) ·
-ffmpeg (LGPL, build sin GPL).
+ffmpeg ([LGPL, build sin GPL](packaging/licenses/FFMPEG-SOURCE.txt)).
 
 Nuestro código: [MIT](LICENSE).
+Avisos completos: [THIRD-PARTY.md](THIRD-PARTY.md) ·
+Dependencias con sus textos: [NOTICES.md](NOTICES.md).
+
+> Proyecto independiente. No está afiliado a OpenAI, a AMD, a NVIDIA ni a la
+> aplicación WhisperDesktop de Const-me.

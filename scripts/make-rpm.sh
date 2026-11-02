@@ -22,7 +22,9 @@ mkdir -p "$work/sources" "$work/rpmbuild"
 cp "$bindir/whisper-desktop" "$work/sources/"
 cp "$root/packaging/whisper-desktop.desktop" "$work/sources/"
 cp "$root/packaging/icons/256x256/whisper-desktop.png" "$work/sources/"
-cp "$root/LICENSE" "$root/THIRD-PARTY.md" "$work/sources/"
+cp "$root/LICENSE" "$root/THIRD-PARTY.md" "$root/NOTICES.md" "$work/sources/"
+mkdir -p "$work/sources/licenses"
+cp "$root"/packaging/licenses/* "$work/sources/licenses/"
 cp "$root/packaging/rpm/whisper-desktop.spec" "$work/"
 
 # Single line on purpose: nested quoting inside `bash -c` plus line

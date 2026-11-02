@@ -32,6 +32,9 @@ install -m644 "$root/packaging/icons/256x256/whisper-desktop.png" \
     "$tree/usr/share/icons/hicolor/256x256/apps/whisper-desktop.png"
 install -m644 "$root/LICENSE" "$tree/usr/share/doc/whisper-desktop/copyright"
 install -m644 "$root/THIRD-PARTY.md" "$tree/usr/share/doc/whisper-desktop/THIRD-PARTY.md"
+install -m644 "$root/NOTICES.md" "$tree/usr/share/doc/whisper-desktop/NOTICES.md"
+install -d "$tree/usr/share/doc/whisper-desktop/licenses"
+install -m644 "$root"/packaging/licenses/* "$tree/usr/share/doc/whisper-desktop/licenses/"
 
 cat > "$tree/DEBIAN/control" <<CONTROL
 Package: whisper-desktop

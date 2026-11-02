@@ -40,6 +40,14 @@
     "targets": [
       "deb",
       "rpm"
-    ]
+    ],
+    "resources": {
+      "../LICENSE": "licenses/LICENSE",
+      "../THIRD-PARTY.md": "licenses/THIRD-PARTY.md",
+      "../NOTICES.md": "licenses/NOTICES.md",
+      "../packaging/licenses/LGPL-3.0-ffmpeg.txt": "licenses/LGPL-3.0-ffmpeg.txt",
+      "../packaging/licenses/FFMPEG-SOURCE.txt": "licenses/FFMPEG-SOURCE.txt",
+      "../packaging/licenses/MIT-whisper.cpp.txt": "licenses/MIT-whisper.cpp.txt"
+    }
   }
 }

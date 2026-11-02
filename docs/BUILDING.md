@@ -78,6 +78,22 @@ bash scripts/make-run.sh stage 0.1.0 release
 
 Ambos se prueban en el workflow con un `$HOME` temporal, sin tocar el sistema.
 
+## Licencias y avisos
+
+`NOTICES.md` se genera, no se escribe a mano. Regénéralo cuando cambien las
+dependencias:
+
+```bash
+node scripts/make-notices.mjs
+```
+
+Lee `Cargo.lock` y `package.json`, busca cada crate en el registro local de Cargo
+(hace falta haber compilado antes) y cada paquete npm en `node_modules`, y
+concaten los textos de licencia una sola vez por licencia.
+
+Los textos que no vienen de una dependencia están en `packaging/licenses/`:
+ffmpeg (LGPL v3 + oferta de fuente) y whisper.cpp (MIT).
+
 ## Añadir un caso de hardware
 
 Copia un `HardwareReport` real y añádelo a `tests/cases/` con el bloque `expect`. Los tests

@@ -1,0 +1,41 @@
+FFmpeg — código fuente correspondiente
+=====================================
+
+Este producto distribuye un binario de FFmpeg bajo la GNU Lesser General
+Public License, versión 3 (ver LGPL-3.0-ffmpeg.txt). FFmpeg está licenciado
+originalmente como LGPL 2.1 o posterior; la compilación que distribuimos
+incluye el texto de la versión 3.
+
+Build utilizado
+---------------
+  Origen:  https://github.com/BtbN/FFmpeg-Builds
+  Paquete: ffmpeg-master-latest-linux64-lgpl.tar.xz  (Linux x86_64)
+           ffmpeg-master-latest-win64-lgpl.zip       (Windows x64)
+  Variante: LGPL, sin componentes GPL (sin libx264, libx265, libfdk-aac…)
+
+Código fuente
+-------------
+El código fuente exacto de FFmpeg está disponible en:
+
+  https://ffmpeg.org/download.html
+  https://git.ffmpeg.org/ffmpeg.git
+
+Las recetas de compilación empleadas por el proyecto BtbN están publicadas en:
+
+  https://github.com/BtbN/FFmpeg-Builds
+
+Oferta
+------
+Si necesitas el código fuente correspondiente a la versión exacta que se te
+distribuyó, abre un issue en:
+
+  https://github.com/TuxArchi/whisper-desktop/issues
+
+y se te facilitará el enlace a la instantánea exacta del repositorio de FFmpeg
+utilizada para construir ese binario.
+
+Sustitución
+-----------
+El binario de FFmpeg se distribuye como ejecutable independiente, no enlazado
+con la aplicación. Puede sustituirse por otra compilación compatible sin
+recompilar Whisper Desktop.

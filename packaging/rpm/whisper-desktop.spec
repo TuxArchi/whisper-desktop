@@ -38,6 +38,16 @@ install -Dm644 %{_sourcedir}/LICENSE \
     %{buildroot}%{_datadir}/licenses/whisper-desktop/LICENSE
 install -Dm644 %{_sourcedir}/THIRD-PARTY.md \
     %{buildroot}%{_datadir}/licenses/whisper-desktop/THIRD-PARTY.md
+%{_datadir}/licenses/whisper-desktop/NOTICES.md
+%{_datadir}/licenses/whisper-desktop/LGPL-3.0-ffmpeg.txt
+%{_datadir}/licenses/whisper-desktop/FFMPEG-SOURCE.txt
+%{_datadir}/licenses/whisper-desktop/MIT-whisper.cpp.txt
+install -Dm644 %{_sourcedir}/NOTICES.md \
+    %{buildroot}%{_datadir}/licenses/whisper-desktop/NOTICES.md
+for licence in %{_sourcedir}/licenses/*; do
+    install -Dm644 "$licence" \
+        %{buildroot}%{_datadir}/licenses/whisper-desktop/$(basename "$licence")
+done
 
 %files
 %{_bindir}/whisper-desktop
@@ -45,6 +55,10 @@ install -Dm644 %{_sourcedir}/THIRD-PARTY.md \
 %{_datadir}/icons/hicolor/256x256/apps/whisper-desktop.png
 %{_datadir}/licenses/whisper-desktop/LICENSE
 %{_datadir}/licenses/whisper-desktop/THIRD-PARTY.md
+%{_datadir}/licenses/whisper-desktop/NOTICES.md
+%{_datadir}/licenses/whisper-desktop/LGPL-3.0-ffmpeg.txt
+%{_datadir}/licenses/whisper-desktop/FFMPEG-SOURCE.txt
+%{_datadir}/licenses/whisper-desktop/MIT-whisper.cpp.txt
 
 %changelog
 * Mon Nov 02 2026 TuxArchi <TuxArchi@users.noreply.github.com> - 0.1.0-1
