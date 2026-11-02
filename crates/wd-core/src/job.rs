@@ -295,7 +295,8 @@ mod tests {
     #[test]
     fn transcribe_produces_one_command() {
         let job = spec(Task::Transcribe, vec![Format::Txt, Format::Srt]);
-        let commands = build_commands(&job, &job.output_plan("2026-11-01", "1930"));
+        let plan = job.output_plan("2026-11-01", "1930");
+        let commands = build_commands(&job, &plan);
         assert_eq!(commands.len(), 1);
 
         let command = &commands[0];
