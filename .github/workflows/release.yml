@@ -186,6 +186,13 @@ jobs:
             [ -e "$file" ] && mv "$file" .
           done
           rmdir deb rpm 2>/dev/null || true
+          # GitHub rewrites spaces in asset names to dots; mirror it here or
+          # `sha256sum -c` fails for exactly the files people check.
+          for file in *; do
+            case "$file" in
+              *" "*) mv -- "$file" "${file// /.}" ;;
+            esac
+          done
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
