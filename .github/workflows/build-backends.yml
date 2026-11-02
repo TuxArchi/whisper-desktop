@@ -82,9 +82,6 @@ jobs:
   # alone when only the CUDA build changes.
   linux-cuda:
     name: linux-cuda
-    # Builds take ~30 minutes and NVIDIA users fall back to Vulkan through
-    # fit_plan_to_catalog. Re-enable when the CUDA stubs are sorted out.
-    if: false
     runs-on: ubuntu-22.04
     container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
@@ -108,6 +105,32 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: linux-cuda
+          path: release/*.tar.gz
+          if-no-files-found: error
+
+  linux-rocm:
+    name: linux-rocm
+    runs-on: ubuntu-22.04
+    # ROCm needs its own container: the toolchain is not on the runner.
+    container: rocm/dev-ubuntu-22.04:6.2.4
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake build-essential git
+
+      - name: Fetch whisper.cpp
+        run: git clone --depth 1 --branch "v${WHISPER_VERSION}" "$WHISPER_REPO" whisper.cpp
+
+      - name: Build
+        working-directory: whisper.cpp
+        run: bash ../scripts/build-backend.sh rocm "$WHISPER_VERSION" ../release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-rocm
           path: release/*.tar.gz
           if-no-files-found: error
 
@@ -183,7 +206,7 @@ jobs:
   catalog:
     name: catalog + release
     runs-on: ubuntu-22.04
-    needs: [linux, linux-cuda, windows, ffmpeg]
+    needs: [linux, linux-cuda, linux-rocm, windows, ffmpeg]
     # A skipped job in `needs` skips the dependent one; the catalogue must run
     # as long as the Linux build and ffmpeg succeeded, even if the optional
     # platforms were disabled or failed.
