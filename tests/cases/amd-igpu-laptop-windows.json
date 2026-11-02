@@ -1,0 +1,22 @@
+{
+  "name": "Laptop con iGPU AMD RDNA2 en Windows debe usar Vulkan",
+  "report": {
+    "schema": 1,
+    "os": { "family": "windows", "version": "Microsoft Windows 11 Home 10.0.22631", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "AMD Ryzen 7 6800H", "physicalCores": 8, "logicalCores": 16, "flags": { "avx2": true } },
+    "ramMb": 16384,
+    "gpus": [
+      {
+        "vendor": "amd",
+        "name": "AMD Radeon 680M",
+        "pciId": "1002:1681",
+        "vramMb": 2048,
+        "driver": "31.0.24027.1012",
+        "family": "rdna2",
+        "confidence": "medium"
+      }
+    ],
+    "vulkan": { "apiVersion": "1.3.280", "deviceCount": 1 }
+  },
+  "expect": { "backend": "vulkan", "model": "base", "variant": "q5_0" }
+}

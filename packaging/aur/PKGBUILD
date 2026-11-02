@@ -1,0 +1,43 @@
+# Maintainer: Whisper Desktop contributors
+# Builds an Arch package from this repository. Published as a prebuilt
+# .pkg.tar.zst in GitHub Releases so users can install it from pamac/octopi
+# without touching a terminal.
+
+pkgname=whisper-desktop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Local audio and video transcription with Whisper, with guided hardware setup"
+arch=('x86_64')
+url="https://github.com/TuxArchi/whisper-desktop"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'openssl' 'librsvg')
+makedepends=('cargo' 'nodejs' 'pnpm')
+options=(!lto)
+source=()
+sha256sums=()
+
+# The CI job checks out the tagged source tree and builds inside the archive,
+# so no remote source list is needed. Building locally:
+#   cd packaging/aur && makepkg -s
+
+build() {
+  cd "$srcdir/whisper-desktop-$pkgver"
+  pnpm install --frozen-lockfile
+  cargo build --release --locked
+}
+
+package() {
+  cd "$srcdir/whisper-desktop-$pkgver"
+
+  install -Dm755 "target/release/whisper-desktop" \
+    "$pkgdir/usr/bin/whisper-desktop"
+
+  install -Dm644 "packaging/whisper-desktop.desktop" \
+    "$pkgdir/usr/share/applications/whisper-desktop.desktop"
+
+  install -Dm644 "packaging/icons/256x256/whisper-desktop.png" \
+    "$pkgdir/usr/share/icons/hicolor/256x256/apps/whisper-desktop.png"
+
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "THIRD-PARTY.md" "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY.md"
+}

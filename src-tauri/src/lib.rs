@@ -1,0 +1,268 @@
+//! Tauri shell. Kept intentionally thin: every decision and every piece of
+//! filesystem knowledge lives in `wd-core`.
+
+mod studio;
+
+use std::path::PathBuf;
+
+use serde::Serialize;
+use tauri::{Emitter, Manager};
+use wd_core::catalog::{Catalog, Platform};
+use wd_core::installer::{install, InstallEvent, InstallRequest};
+use wd_core::manifest::Manifest;
+use wd_core::paths::{self, AppPaths};
+
+/// Embedded for now. Phase 3 replaces it with a signed download of
+/// `catalog.json` from GitHub Releases.
+const EMBEDDED_CATALOG: &str = include_str!("../../catalog/catalog.json");
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppStateView {
+    installed: bool,
+    app_version: String,
+    data_dir: String,
+    platform: String,
+    portable: bool,
+    zip_preview: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogStatus {
+    ok: bool,
+    backends: usize,
+    models: usize,
+    errors: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VerifyView {
+    working: Option<String>,
+    rtf: f64,
+    tried: Vec<String>,
+}
+
+fn app_dir() -> PathBuf {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(PathBuf::from))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn resolved_paths() -> AppPaths {
+    paths::resolve_configured(&app_dir())
+}
+
+fn load_catalog() -> Result<Catalog, String> {
+    Catalog::parse(EMBEDDED_CATALOG).map_err(|error| format!("catálogo inválido: {error}"))
+}
+
+#[tauri::command]
+fn get_state() -> AppStateView {
+    let root = app_dir();
+    let app_paths = resolved_paths();
+
+    let installed = Manifest::load(&app_paths.manifest_file)
+        .map(|manifest| manifest.is_installed(&root))
+        .unwrap_or(false);
+
+    AppStateView {
+        installed,
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
+        data_dir: app_paths.data.to_string_lossy().to_string(),
+        platform: Platform::current().as_str().to_string(),
+        portable: app_paths.data == root.join("data"),
+        zip_preview: paths::looks_like_zip_preview(&root),
+    }
+}
+
+#[tauri::command]
+fn detect_hardware() -> wd_core::HardwareReport {
+    wd_core::detect::detect()
+}
+
+#[tauri::command]
+fn build_plan() -> wd_core::InstallPlan {
+    wd_core::plan(&wd_core::detect::detect())
+}
+
+#[tauri::command]
+fn catalog_status() -> CatalogStatus {
+    match load_catalog() {
+        Ok(catalog) => {
+            let errors = catalog.validate(env!("CARGO_PKG_VERSION"));
+            CatalogStatus {
+                ok: errors.is_empty(),
+                backends: catalog.backends.len(),
+                models: catalog.models.len(),
+                errors,
+            }
+        }
+        Err(error) => CatalogStatus {
+            ok: false,
+            backends: 0,
+            models: 0,
+            errors: vec![error],
+        },
+    }
+}
+
+#[tauri::command]
+async fn start_install(app: tauri::AppHandle) -> Result<Manifest, String> {
+    tauri::async_runtime::spawn_blocking(move || install_blocking(&app))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn install_blocking(app: &tauri::AppHandle) -> Result<Manifest, String> {
+    let app_paths = resolved_paths();
+    let catalog = load_catalog()?;
+
+    let errors = catalog.validate(env!("CARGO_PKG_VERSION"));
+    if !errors.is_empty() {
+        return Err(format!(
+            "el catálogo de descargas no está listo:\n{}",
+            errors.join("\n")
+        ));
+    }
+
+    let report = wd_core::detect::detect();
+    let plan = wd_core::plan(&report);
+
+    let request = InstallRequest {
+        plan: &plan,
+        paths: &app_paths,
+        catalog: &catalog,
+        platform: Platform::current(),
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
+    };
+
+    let mut emit = |event: InstallEvent| {
+        let _ = app.emit("install:event", &event);
+    };
+
+    install(&request, &wd_core::download::HttpFetcher, &mut emit)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn verify_installation() -> Result<VerifyView, String> {
+    tauri::async_runtime::spawn_blocking(verify_blocking)
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn verify_blocking() -> Result<VerifyView, String> {
+    let app_paths = resolved_paths();
+    let manifest = Manifest::load(&app_paths.manifest_file).map_err(|error| error.to_string())?;
+    let mut config = wd_core::config::Config::load_or_default(&app_paths.config_file);
+
+    let report = wd_core::detect::detect();
+    let mut plan = wd_core::plan(&report);
+    // Verify what is actually installed, not what we would choose today.
+    plan.backend = manifest.backend;
+
+    let model_name = manifest
+        .models
+        .first()
+        .ok_or_else(|| "el manifest no registra ningún modelo".to_string())?;
+    let model = app_paths.model_path(model_name);
+    let threads = report.cpu.thread_count();
+
+    let outcome = wd_core::bench::verify_install(
+        &app_paths,
+        &plan,
+        &model,
+        threads,
+        &wd_core::bench::SystemRunner,
+    );
+
+    if let Some(backend) = outcome.working {
+        config.install.verified_backend = Some(backend.as_str().to_string());
+        config.install.verified_rtf = outcome
+            .report
+            .as_ref()
+            .map(|report| format!("{:.2}", report.rtf));
+        config.save(&app_paths.config_file).ok();
+    }
+
+    Ok(VerifyView {
+        working: outcome.working.map(|backend| backend.as_str().to_string()),
+        rtf: outcome.report.map(|report| report.rtf).unwrap_or(0.0),
+        tried: outcome
+            .tried
+            .iter()
+            .map(|backend| backend.as_str().to_string())
+            .collect(),
+    })
+}
+
+#[tauri::command]
+fn integrate_system() -> wd_core::system::IntegrationReport {
+    integration_options().map_or_else(
+        || wd_core::system::IntegrationReport {
+            actions: Vec::new(),
+            errors: vec!["no se pudo resolver la ruta del ejecutable".to_string()],
+        },
+        |options| wd_core::system::integrate(&options),
+    )
+}
+
+#[tauri::command]
+fn unintegrate_system() -> wd_core::system::IntegrationReport {
+    integration_options().map_or_else(
+        || wd_core::system::IntegrationReport {
+            actions: Vec::new(),
+            errors: vec!["no se pudo resolver la ruta del ejecutable".to_string()],
+        },
+        |options| wd_core::system::unintegrate(&options),
+    )
+}
+
+fn integration_options() -> Option<wd_core::system::IntegrationOptions> {
+    let exe = std::env::current_exe().ok()?;
+    let mut options = wd_core::system::IntegrationOptions::new("Whisper Desktop", exe);
+    options.create_desktop_shortcut = true;
+    Some(options)
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        // Must be registered first: it decides whether this process owns the
+        // app or just forwards its arguments to the running one.
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            let files = studio::media_from_args(argv);
+            if !files.is_empty() {
+                let _ = app.emit("open-files", files);
+            }
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
+        }))
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            get_state,
+            detect_hardware,
+            build_plan,
+            catalog_status,
+            start_install,
+            verify_installation,
+            integrate_system,
+            unintegrate_system,
+            studio::studio_state,
+            studio::preview_output,
+            studio::start_job,
+            studio::cancel_job,
+            studio::list_history,
+            studio::open_path,
+            studio::scan_folder,
+            studio::initial_files,
+            studio::data_info,
+            studio::relocate_data
+        ])
+        .run(tauri::generate_context!())
+        .expect("error al iniciar Whisper Desktop");
+}

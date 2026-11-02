@@ -1,0 +1,23 @@
+{
+  "name": "RTX 4090 24 GB en Linux debe usar CUDA con large-v3 fp16",
+  "report": {
+    "schema": 1,
+    "os": { "family": "linux", "version": "Ubuntu 24.04.1 LTS", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "AMD Ryzen 9 7950X", "physicalCores": 16, "logicalCores": 32, "flags": { "avx2": true, "avx512f": true, "f16c": true, "fma": true } },
+    "ramMb": 65536,
+    "gpus": [
+      {
+        "vendor": "nvidia",
+        "name": "NVIDIA GeForce RTX 4090",
+        "pciId": "10de:2684",
+        "vramMb": 24564,
+        "driver": "550.54",
+        "family": "ada",
+        "confidence": "high"
+      }
+    ],
+    "vulkan": { "apiVersion": "1.3.280", "deviceCount": 1 },
+    "nvidia": { "driverVersion": "550.54", "computeCap": "8.9", "vramMb": 24564 }
+  },
+  "expect": { "backend": "cuda", "model": "large-v3", "variant": "fp16" }
+}

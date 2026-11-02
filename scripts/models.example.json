@@ -1,0 +1,38 @@
+[
+  {
+    "id": "base",
+    "file": "ggml-base.bin",
+    "url": "https://huggingface.co/ggml-org/whisper.cpp/resolve/main/ggml-base.bin",
+    "sha256": "REEMPLAZAR_CON_HASH_REAL_DE_64_CARACTERES",
+    "size": 147951465,
+    "vramMb": 640,
+    "multilingual": true
+  },
+  {
+    "id": "small",
+    "file": "ggml-small.bin",
+    "url": "https://huggingface.co/ggml-org/whisper.cpp/resolve/main/ggml-small.bin",
+    "sha256": "REEMPLAZAR_CON_HASH_REAL_DE_64_CARACTERES",
+    "size": 487601967,
+    "vramMb": 1024,
+    "multilingual": true
+  },
+  {
+    "id": "large-v3-turbo",
+    "file": "ggml-large-v3-turbo.bin",
+    "url": "https://huggingface.co/ggml-org/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
+    "sha256": "REEMPLAZAR_CON_HASH_REAL_DE_64_CARACTERES",
+    "size": 1624555275,
+    "vramMb": 3072,
+    "multilingual": true
+  },
+  {
+    "id": "large-v3",
+    "file": "ggml-large-v3.bin",
+    "url": "https://huggingface.co/ggml-org/whisper.cpp/resolve/main/ggml-large-v3.bin",
+    "sha256": "REEMPLAZAR_CON_HASH_REAL_DE_64_CARACTERES",
+    "size": 3095033483,
+    "vramMb": 5120,
+    "multilingual": true
+  }
+]

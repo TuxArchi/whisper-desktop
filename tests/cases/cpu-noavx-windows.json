@@ -1,0 +1,12 @@
+{
+  "name": "CPU antigua sin AVX2 debe avisar y usar base",
+  "report": {
+    "schema": 1,
+    "os": { "family": "windows", "version": "Microsoft Windows 10 Pro 10.0.19045", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "Intel Core i5-2400", "physicalCores": 4, "logicalCores": 4, "flags": { "avx2": false } },
+    "ramMb": 8192,
+    "gpus": [],
+    "warnings": [{ "code": "warn.no_avx2" }]
+  },
+  "expect": { "backend": "cpu", "model": "base", "variant": "q5_0" }
+}

@@ -1,0 +1,192 @@
+name: Backends
+
+# Builds the whisper.cpp backends, hashes them, generates the signed
+# catalogue and publishes the release. Independent from app releases: bumping
+# whisper.cpp never requires shipping a new application version.
+
+on:
+  workflow_dispatch:
+    inputs:
+      whisper_version:
+        description: "Versión de whisper.cpp (tag sin la v)"
+        required: true
+        default: "1.8.4"
+      channel:
+        description: "Canal del catálogo"
+        required: true
+        default: "stable"
+        type: choice
+        options: [stable, beta]
+  push:
+    tags:
+      - "backends-*"
+
+permissions:
+  contents: write
+
+env:
+  WHISPER_VERSION: ${{ github.event.inputs.whisper_version || '1.8.4' }}
+  WHISPER_REPO: https://github.com/ggml-org/whisper.cpp
+  # Pinned on purpose: "latest" makes releases unreproducible.
+  FFMPEG_TAG: autobuild-2026-10-31-12-00
+
+jobs:
+  linux:
+    name: linux-${{ matrix.backend }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [cpu, vulkan]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential libvulkan-dev glslc
+
+      - name: Fetch whisper.cpp
+        run: |
+          git clone --depth 1 --branch "v${WHISPER_VERSION}" "$WHISPER_REPO" whisper.cpp
+
+      - name: Build
+        working-directory: whisper.cpp
+        run: bash ../scripts/build-backend.sh "${{ matrix.backend }}" "$WHISPER_VERSION" ../release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.backend }}
+          path: release/*.tar.gz
+          if-no-files-found: error
+
+  # CUDA on Linux needs the toolkit; kept separate so it can be triggered
+  # alone when only the CUDA build changes.
+  linux-cuda:
+    name: linux-cuda
+    runs-on: ubuntu-22.04
+    container: nvidia/cuda:12.6.2-devel-ubuntu22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: |
+          apt-get update
+          apt-get install -y cmake build-essential git
+
+      - name: Fetch whisper.cpp
+        run: git clone --depth 1 --branch "v${WHISPER_VERSION}" "$WHISPER_REPO" whisper.cpp
+
+      - name: Build
+        working-directory: whisper.cpp
+        run: bash ../scripts/build-backend.sh cuda "$WHISPER_VERSION" ../release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-cuda
+          path: release/*.tar.gz
+          if-no-files-found: error
+
+  windows:
+    name: windows-${{ matrix.backend }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [cpu, vulkan, cuda]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vulkan SDK
+        if: matrix.backend == 'vulkan'
+        uses: jurplel/install-vulkan-sdk@v1.2.0
+        with:
+          version: 1.4.304.0
+
+      - name: Fetch whisper.cpp
+        run: git clone --depth 1 --branch "v$env:WHISPER_VERSION" "$env:WHISPER_REPO" whisper.cpp
+        shell: pwsh
+
+      - name: Build
+        working-directory: whisper.cpp
+        shell: pwsh
+        run: ./../scripts/build-backend.ps1 -Backend ${{ matrix.backend }} -Version $env:WHISPER_VERSION -Out ../release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.backend }}
+          path: release/*.zip
+          if-no-files-found: error
+
+  # ffmpeg is repacked so the app only ships the binary, never the whole tree.
+  ffmpeg:
+    name: ffmpeg-lgpl
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and repack
+        run: |
+          set -euo pipefail
+          base="https://github.com/BtbN/FFmpeg-Builds/releases/download/${FFMPEG_TAG}"
+          mkdir -p release work
+
+          curl -fL "$base/ffmpeg-n7.1-latest-win64-lgpl.zip" -o work/win.zip
+          unzip -q work/win.zip -d work/win
+          mkdir -p work/stage-win/bin
+          find work/win -name ffmpeg.exe -exec cp {} work/stage-win/bin/ffmpeg.exe \;
+          (cd work/stage-win && zip -qr ../../release/ffmpeg-lgpl-win64.zip .)
+          cp work/win/LICENSE.txt release/LICENSE.ffmpeg.txt 2>/dev/null || true
+
+          curl -fL "$base/ffmpeg-n7.1-latest-linux64-lgpl.tar.xz" -o work/linux.tar.xz
+          tar -xJf work/linux.tar.xz -C work --one-top-level=linux
+          mkdir -p work/stage-linux/bin
+          find work/linux -name ffmpeg -type f -exec cp {} work/stage-linux/bin/ffmpeg \;
+          chmod +x work/stage-linux/bin/ffmpeg
+          tar -C work/stage-linux -czf release/ffmpeg-lgpl-linux64.tar.gz .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg
+          path: release/ffmpeg-*.*
+
+  catalog:
+    name: catalog + release
+    runs-on: ubuntu-22.04
+    needs: [linux, linux-cuda, windows, ffmpeg]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Hash and generate catalogue
+        run: |
+          node scripts/make-catalog.mjs \
+            --artifacts release \
+            --manifest scripts/backends.manifest.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --release "$GITHUB_REF_NAME" \
+            --channel "${{ github.event.inputs.channel || 'stable' }}" \
+            --out release/catalog.json
+
+      - name: Sign catalogue
+        env:
+          MINISIGN_SECRET: ${{ secrets.MINISIGN_SECRET_KEY }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y minisign
+          printf '%s' "$MINISIGN_SECRET" | base64 -d > /tmp/minisign.key
+          minisign -S -s /tmp/minisign.key -m release/catalog.json -x release/catalog.json.minisig
+          rm -f /tmp/minisign.key
+          cat release/catalog.json.minisig
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "$GITHUB_REF_NAME" --yes 2>/dev/null || true
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --title "Backends $GITHUB_REF_NAME" \
+            --notes "whisper.cpp ${WHISPER_VERSION} · ffmpeg ${FFMPEG_TAG} · canal ${{ github.event.inputs.channel || 'stable' }}"

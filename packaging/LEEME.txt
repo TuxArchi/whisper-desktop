@@ -1,0 +1,39 @@
+Whisper Desktop — Windows
+=========================
+
+1. Extrae esta carpeta completa (no la ejecutes desde dentro del ZIP).
+2. Doble clic en WhisperDesktop.exe
+3. Sigue el asistente: detecta tu GPU, recomienda el modelo y descarga lo necesario.
+
+Requisitos
+----------
+- Windows 10 (21H2 o superior) o Windows 11, 64 bits.
+- No requiere permisos de administrador.
+- WebView2: viene incluido en Windows 11 y en Windows 10 actualizado.
+  Si al abrir aparece el error "WebView2 Runtime not found", instálalo desde:
+  https://developer.microsoft.com/microsoft-edge/webview2/
+
+Si Windows muestra "Windows protegió tu PC"
+--------------------------------------------
+Clic derecho sobre el ZIP -> Propiedades -> Desbloquear, y vuelve a extraerlo.
+El programa no está firmado todavía (v0.1). A partir de la v0.2 se firma.
+
+Dónde se guardan las cosas
+--------------------------
+Todo vive dentro de esta misma carpeta:
+  data\       configuración e historial
+  models\     modelos descargados
+  backends\   motor de transcripción
+
+Puedes mover la carpeta entera a un USB y funciona igual.
+Si quieres mover solo los datos, usa Ajustes -> Datos y almacenamiento.
+
+Desinstalar
+-----------
+Borra esta carpeta. Las transcripciones que hayas generado se guardan fuera
+(por defecto en Documentos\Transcripciones) y no se tocan.
+
+Privacidad
+----------
+Todo el procesamiento ocurre en tu equipo. La única conexión a internet es la
+descarga del motor y del modelo, y solo la primera vez.

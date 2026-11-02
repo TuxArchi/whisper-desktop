@@ -1,0 +1,22 @@
+{
+  "name": "Intel Arc A770 en Windows debe usar Vulkan",
+  "report": {
+    "schema": 1,
+    "os": { "family": "windows", "version": "Microsoft Windows 11 Pro 10.0.22631", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "Intel Core i7-12700K", "physicalCores": 12, "logicalCores": 20, "flags": { "avx2": true } },
+    "ramMb": 32768,
+    "gpus": [
+      {
+        "vendor": "intel",
+        "name": "Intel(R) Arc(TM) A770 Graphics",
+        "pciId": "8086:56a0",
+        "vramMb": 8192,
+        "driver": "31.0.101.5333",
+        "family": "arc",
+        "confidence": "high"
+      }
+    ],
+    "vulkan": { "apiVersion": "1.3.280", "deviceCount": 1 }
+  },
+  "expect": { "backend": "vulkan", "model": "large-v3-turbo", "variant": "fp16" }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Ryzen AI Max+ 395 (gfx1151) en Windows debe usar ROCm",
+  "report": {
+    "schema": 1,
+    "os": { "family": "windows", "version": "Microsoft Windows 11 Pro 10.0.26200", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "AMD RYZEN AI MAX+ 395", "physicalCores": 16, "logicalCores": 32, "flags": { "avx2": true, "avx512f": true } },
+    "ramMb": 65536,
+    "gpus": [
+      {
+        "vendor": "amd",
+        "name": "AMD Radeon 8060S Graphics",
+        "pciId": "1002:1586",
+        "vramMb": 8192,
+        "driver": "32.0.21030.5001",
+        "family": "ryzen-ai",
+        "confidence": "high"
+      }
+    ],
+    "vulkan": { "apiVersion": "1.3.290", "deviceCount": 1 }
+  },
+  "expect": { "backend": "rocm", "model": "large-v3-turbo", "variant": "fp16" }
+}

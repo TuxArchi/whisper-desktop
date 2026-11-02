@@ -1,0 +1,63 @@
+{
+  "$comment": "Contract between the backend build jobs and the release. `make-catalog.mjs` turns this into catalog.json using the real file hashes.",
+  "version": "1.8.4",
+  "minAppVersion": "0.1.0",
+  "backends": [
+    {
+      "id": "cpu",
+      "platform": "windows-x86_64",
+      "file": "whisper-{version}-windows-x64-cpu.zip",
+      "priority": 10
+    },
+    {
+      "id": "vulkan",
+      "platform": "windows-x86_64",
+      "file": "whisper-{version}-windows-x64-vulkan.zip",
+      "priority": 20
+    },
+    {
+      "id": "cuda",
+      "platform": "windows-x86_64",
+      "file": "whisper-{version}-windows-x64-cuda12.zip",
+      "priority": 30
+    },
+    {
+      "id": "cpu",
+      "platform": "linux-x86_64",
+      "file": "whisper-{version}-linux-x64-cpu.tar.gz",
+      "priority": 10
+    },
+    {
+      "id": "vulkan",
+      "platform": "linux-x86_64",
+      "file": "whisper-{version}-linux-x64-vulkan.tar.gz",
+      "priority": 20
+    },
+    {
+      "id": "cuda",
+      "platform": "linux-x86_64",
+      "file": "whisper-{version}-linux-x64-cuda12.tar.gz",
+      "priority": 30
+    },
+    {
+      "id": "rocm",
+      "platform": "linux-x86_64",
+      "file": "whisper-{version}-linux-x64-rocm-gfx110X.tar.gz",
+      "priority": 40
+    }
+  ],
+  "tools": [
+    {
+      "id": "ffmpeg-lgpl",
+      "platform": "windows-x86_64",
+      "version": "n7.1",
+      "file": "ffmpeg-lgpl-win64.zip"
+    },
+    {
+      "id": "ffmpeg-lgpl",
+      "platform": "linux-x86_64",
+      "version": "n7.1",
+      "file": "ffmpeg-lgpl-linux64.tar.gz"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "RX 9070 XT (RDNA4) en Windows sí puede usar ROCm",
+  "report": {
+    "schema": 1,
+    "os": { "family": "windows", "version": "Microsoft Windows 11 Pro 10.0.26100", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "AMD Ryzen 7 9800X3D", "physicalCores": 8, "logicalCores": 16, "flags": { "avx2": true, "avx512f": true } },
+    "ramMb": 32768,
+    "gpus": [
+      {
+        "vendor": "amd",
+        "name": "AMD Radeon RX 9070 XT",
+        "pciId": "1002:7550",
+        "vramMb": 16384,
+        "driver": "32.0.21025.1006",
+        "family": "rdna4",
+        "confidence": "high"
+      }
+    ],
+    "vulkan": { "apiVersion": "1.3.290", "deviceCount": 1 }
+  },
+  "expect": { "backend": "rocm", "model": "large-v3", "variant": "fp16" }
+}

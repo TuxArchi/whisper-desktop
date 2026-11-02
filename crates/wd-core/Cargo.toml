@@ -1,0 +1,19 @@
+[package]
+name = "wd-core"
+description = "Hardware detection and installation planning for Whisper Desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2 = "0.10"
+ureq = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tar = "0.4"
+flate2 = "1"

@@ -1,0 +1,16 @@
+[package]
+name = "wd-cli"
+description = "Command line diagnostics for Whisper Desktop (--detect-only)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "whisper-desktop"
+path = "src/main.rs"
+
+[dependencies]
+wd-core = { path = "../wd-core" }

@@ -1,0 +1,22 @@
+{
+  "name": "RX 6700 XT en Windows debe usar Vulkan (ROCm no soportado)",
+  "report": {
+    "schema": 1,
+    "os": { "family": "windows", "version": "Microsoft Windows 11 Pro 10.0.22631", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "AMD Ryzen 5 5600X 6-Core Processor", "physicalCores": 6, "logicalCores": 12, "flags": { "avx2": true, "f16c": true, "fma": true } },
+    "ramMb": 32768,
+    "gpus": [
+      {
+        "vendor": "amd",
+        "name": "AMD Radeon RX 6700 XT",
+        "pciId": "1002:73df",
+        "vramMb": 12288,
+        "driver": "31.0.24033.1003",
+        "family": "rdna2",
+        "confidence": "high"
+      }
+    ],
+    "vulkan": { "apiVersion": "1.3.280", "deviceCount": 1 }
+  },
+  "expect": { "backend": "vulkan", "model": "large-v3", "variant": "q5_0" }
+}

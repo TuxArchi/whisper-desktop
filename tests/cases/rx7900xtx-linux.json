@@ -1,0 +1,24 @@
+{
+  "name": "RX 7900 XTX en Linux con /dev/kfd accesible debe usar ROCm",
+  "report": {
+    "schema": 1,
+    "os": { "family": "linux", "version": "Arch Linux", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "AMD Ryzen 7 7800X3D", "physicalCores": 8, "logicalCores": 16, "flags": { "avx2": true, "avx512f": true } },
+    "ramMb": 32768,
+    "gpus": [
+      {
+        "vendor": "amd",
+        "name": "AMD Radeon RX 7900 XTX",
+        "pciId": "1002:744c",
+        "vramMb": 24576,
+        "driver": "amdgpu",
+        "gfxArch": "gfx1100",
+        "family": "rdna3",
+        "confidence": "high"
+      }
+    ],
+    "vulkan": { "apiVersion": "1.3.290", "deviceCount": 1 },
+    "rocm": { "gfxTarget": "gfx1100", "kfdAccessible": true, "groupsOk": true }
+  },
+  "expect": { "backend": "rocm", "model": "large-v3", "variant": "fp16" }
+}

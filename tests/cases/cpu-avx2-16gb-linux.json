@@ -1,0 +1,12 @@
+{
+  "name": "CPU con AVX2 y 16 GB de RAM puede con small cuantizado",
+  "report": {
+    "schema": 1,
+    "os": { "family": "linux", "version": "Fedora Linux 40", "arch": "x86_64", "isWsl": false },
+    "cpu": { "model": "AMD Ryzen 5 3600", "physicalCores": 6, "logicalCores": 12, "flags": { "avx2": true, "f16c": true, "fma": true } },
+    "ramMb": 16384,
+    "gpus": [],
+    "disks": [{ "mount": "/", "freeMb": 120000, "totalMb": 512000 }]
+  },
+  "expect": { "backend": "cpu", "model": "small", "variant": "q5_0" }
+}

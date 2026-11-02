@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Whisper Desktop — transcripción local con detección de hardware</title>
+    <meta
+      name="description"
+      content="Instalador con GUI que detecta tu GPU, elige el motor (CUDA, Vulkan, ROCm o CPU) y el modelo, y te deja Whisper listo para transcribir y traducir sin internet ni Python."
+    />
+    <meta property="og:title" content="Whisper Desktop" />
+    <meta
+      property="og:description"
+      content="Transcribe y traduce audio en tu propio equipo. Sin Python, sin CUDA a mano, sin enviar tu audio a internet."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://tuxarchi.github.io/whisper-desktop/assets/banner.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="assets/icon-256.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="#top">
+        <img src="assets/icon-256.png" alt="" width="30" height="30" />
+        <span>Whisper Desktop</span>
+      </a>
+      <nav>
+        <a href="#capturas">Capturas</a>
+        <a href="#hardware">Hardware</a>
+        <a href="#instalar">Instalar</a>
+        <a class="btn small" href="https://github.com/TuxArchi/whisper-desktop">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <img class="hero-icon" src="assets/icon-256.png" alt="" width="88" height="88" />
+        <span class="eyebrow">Windows · Linux · 100 % offline</span>
+        <h1>Transcribe y traduce audio<br /><span class="accent">en tu propio equipo</span>.</h1>
+        <p class="lead">
+          Whisper Desktop detecta tu tarjeta gráfica, elige el motor y el modelo que mejor le
+          van, y te deja una aplicación lista para arrastrar un archivo y obtener texto.
+          Sin Python. Sin CUDA a mano. Sin enviar tu audio a internet.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="https://github.com/TuxArchi/whisper-desktop/releases">Descargar</a>
+          <a class="btn ghost" href="https://github.com/TuxArchi/whisper-desktop">Código fuente</a>
+        </div>
+        <ul class="chips">
+          <li>NVIDIA · CUDA</li>
+          <li>AMD · Vulkan / ROCm</li>
+          <li>Intel · Vulkan</li>
+          <li>CPU · AVX2</li>
+        </ul>
+      </section>
+
+      <section class="shot-frame">
+        <img src="assets/01-studio.png" alt="Pantalla principal de Whisper Desktop" />
+      </section>
+
+      <section id="capturas" class="section">
+        <h2>Todo el flujo, en dos pasos</h2>
+        <p class="section-lead">
+          El asistente lee tu hardware real, explica por qué elige cada cosa y solo entonces
+          descarga. Nada de “confía en mí”.
+        </p>
+        <div class="shots">
+          <figure>
+            <img src="assets/02-bienvenida.png" alt="Primera pantalla del asistente" />
+            <figcaption>
+              <strong>1 · Analizar</strong>
+              CPU, memoria, GPU, VRAM y Vulkan. Sin permisos de administrador.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="assets/03-recomendacion.png" alt="Pantalla de recomendación" />
+            <figcaption>
+              <strong>2 · Entender</strong>
+              Motor, modelo e hilos, con los motivos a la vista y alternativas si la GPU no
+              responde.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Lo que hace distinto</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Un motor, no un entorno</h3>
+            <p>
+              Usa whisper.cpp: un binario por backend, sin Python, sin entornos virtuales y
+              sin wheels de PyTorch de 3 GB.
+            </p>
+          </article>
+          <article class="card">
+            <h3>AMD de primera clase</h3>
+            <p>
+              Vulkan en Windows y ROCm en Linux cuando la GPU está soportada. Nunca se ofrece
+              ROCm donde AMD no lo soporta.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Verificación real</h3>
+            <p>
+              Al instalar se ejecuta una prueba corta y se lee del log qué backend cargó de
+              verdad. Si la GPU falló en silencio, cambia al siguiente.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Integridad primero</h3>
+            <p>
+              Cada binario se comprueba con SHA-256 antes de ejecutarse. Si el hash no
+              coincide, se borra y se avisa.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Portable de verdad</h3>
+            <p>
+              En Windows todo vive en la carpeta que extraes, con los datos dentro. Puedes
+              moverla a un USB y sigue funcionando.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Sin terminal en Linux</h3>
+            <p>
+              <code>.deb</code>, <code>.rpm</code> y paquete de Arch: se instalan desde el
+              centro de software y aparecen en el menú.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="hardware" class="section">
+        <h2>Qué backend elige</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>GPU</th>
+                <th>Windows</th>
+                <th>Linux</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>NVIDIA (GTX 900+)</td>
+                <td><span class="tag cuda">CUDA</span></td>
+                <td><span class="tag cuda">CUDA</span></td>
+              </tr>
+              <tr>
+                <td>AMD RDNA 4 / Ryzen AI</td>
+                <td><span class="tag rocm">ROCm</span></td>
+                <td><span class="tag rocm">ROCm</span></td>
+              </tr>
+              <tr>
+                <td>AMD RDNA 3</td>
+                <td><span class="tag vk">Vulkan</span></td>
+                <td><span class="tag rocm">ROCm</span> / <span class="tag vk">Vulkan</span></td>
+              </tr>
+              <tr>
+                <td>AMD RDNA 1–2, Vega, GCN</td>
+                <td><span class="tag vk">Vulkan</span></td>
+                <td><span class="tag vk">Vulkan</span></td>
+              </tr>
+              <tr>
+                <td>Intel Arc / iGPU</td>
+                <td><span class="tag vk">Vulkan</span></td>
+                <td><span class="tag vk">Vulkan</span></td>
+              </tr>
+              <tr>
+                <td>Sin GPU</td>
+                <td><span class="tag cpu">CPU</span></td>
+                <td><span class="tag cpu">CPU</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted small">
+          La matriz completa, con el modelo recomendado por VRAM, está en
+          <a href="https://github.com/TuxArchi/whisper-desktop/blob/main/docs/HARDWARE-MATRIX.md">docs/HARDWARE-MATRIX.md</a>.
+        </p>
+      </section>
+
+      <section id="instalar" class="section">
+        <h2>Cómo se instala</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Windows</h3>
+            <p>Extrae el ZIP y ejecuta <code>WhisperDesktop.exe</code>. Sin administrador.</p>
+          </article>
+          <article class="card">
+            <h3>Ubuntu · Debian</h3>
+            <p>Doble clic en el <code>.deb</code> y «Instalar» en el centro de software.</p>
+          </article>
+          <article class="card">
+            <h3>Fedora · openSUSE</h3>
+            <p>Doble clic en el <code>.rpm</code>, igual que el anterior.</p>
+          </article>
+          <article class="card">
+            <h3>Arch</h3>
+            <p>Paquete precompilado desde Releases, abierto con pamac u octopi.</p>
+          </article>
+        </div>
+        <p class="muted small">
+          Los binarios se publican en
+          <a href="https://github.com/TuxArchi/whisper-desktop/releases">Releases</a>. Mientras
+          no exista un release de motores, la app avisa y no permite instalar: la descarga
+          exige hashes reales.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <div class="foot-brand">
+        <img src="assets/icon-256.png" alt="" width="26" height="26" />
+        <span>Whisper Desktop</span>
+      </div>
+      <p class="muted small">
+        Motor <a href="https://github.com/ggml-org/whisper.cpp">whisper.cpp</a> (MIT) ·
+        modelos de <a href="https://github.com/openai/whisper">OpenAI Whisper</a> (MIT) ·
+        ffmpeg (LGPL). Código propio bajo <a href="https://github.com/TuxArchi/whisper-desktop/blob/main/LICENSE">MIT</a>.
+      </p>
+    </footer>
+  </body>
+</html>
