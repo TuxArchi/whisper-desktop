@@ -15,6 +15,9 @@ version="${2:?falta la versión}"
 out="${3:-release}"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
+# Absolute: the script later changes directory, and a relative "release/" would
+# resolve somewhere else (it broke the CI arch job).
+out="$(mkdir -p "$out" && cd "$out" && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 

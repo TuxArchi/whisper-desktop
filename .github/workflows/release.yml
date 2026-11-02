@@ -116,9 +116,12 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           HOME_DIR="$(mktemp -d)"
           HOME="$HOME_DIR" ./release/WhisperDesktop-"$VERSION"-x64.run --help >/dev/null
+          # `grep -q` would close the pipe early and tar would fail with
+          # SIGPIPE; dump the listing first and search it.
           tar -tzf <(tail -n +$(awk '/^exit 0$/{print NR+1; exit}' \
             ./release/WhisperDesktop-"$VERSION"-x64.run) \
-            ./release/WhisperDesktop-"$VERSION"-x64.run) | grep -q whisper-desktop
+            ./release/WhisperDesktop-"$VERSION"-x64.run) > /tmp/payload.txt
+          grep -q whisper-desktop /tmp/payload.txt
 
       - uses: actions/upload-artifact@v4
         with:
