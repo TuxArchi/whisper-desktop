@@ -59,10 +59,10 @@ jobs:
         if: matrix.backend == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          vulkan_version: 1.3.290
+          vulkan_version: 1.4.363.0
           install_runtime: false
           cache: true
-          stripdown: true
+          stripdown: false
 
       - name: Fetch whisper.cpp
         run: |
@@ -82,6 +82,9 @@ jobs:
   # alone when only the CUDA build changes.
   linux-cuda:
     name: linux-cuda
+    # Builds take ~30 minutes and NVIDIA users fall back to Vulkan through
+    # fit_plan_to_catalog. Re-enable when the CUDA stubs are sorted out.
+    if: false
     runs-on: ubuntu-22.04
     container: nvidia/cuda:12.6.2-devel-ubuntu22.04
     steps:
@@ -125,10 +128,10 @@ jobs:
         if: matrix.backend == 'vulkan'
         uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          vulkan_version: 1.3.290
+          vulkan_version: 1.4.363.0
           install_runtime: false
           cache: true
-          stripdown: true
+          stripdown: false
 
       - name: Fetch whisper.cpp
         run: git clone --depth 1 --branch "v$env:WHISPER_VERSION" "$env:WHISPER_REPO" whisper.cpp
