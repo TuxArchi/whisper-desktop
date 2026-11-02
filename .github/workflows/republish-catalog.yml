@@ -1,0 +1,80 @@
+name: Republish catalog
+
+# Regenerates catalog.json from the assets that are already in a release.
+#
+# Needed when the build succeeded but the catalogue was wrong: a filename that
+# did not match the manifest, a channel change, a new model. Rebuilding every
+# backend for that would cost 40 minutes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_release:
+        description: "Release con los binarios (p. ej. backends-r3)"
+        required: true
+      release_tag:
+        description: "Release donde publicar el catálogo"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  catalog:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download existing assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          gh release download "${{ inputs.source_release }}" \
+            --repo "$GITHUB_REPOSITORY" --dir release --pattern "*"
+          rm -f release/catalog.json release/catalog.json.sig
+
+      - name: Generate catalogue
+        run: |
+          set -euo pipefail
+          node scripts/make-catalog.mjs \
+            --artifacts release \
+            --manifest scripts/backends.manifest.json \
+            --models scripts/models.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --release "${{ inputs.source_release }}" \
+            --allow-missing \
+            --out release/catalog.json
+
+      - name: Sign catalogue (Ed25519)
+        env:
+          CATALOG_SIGNING_KEY: ${{ secrets.CATALOG_SIGNING_KEY }}
+          CATALOG_PUBLIC_KEY: yTr7vAs25nvtFhPwfGeaoLXcezMl+eqNoSMASXvm6cE=
+        run: |
+          set -euo pipefail
+          printf '%s' "$CATALOG_SIGNING_KEY" | base64 -d > /tmp/catalog.key
+          node scripts/trust.mjs sign --key /tmp/catalog.key \
+            --in release/catalog.json --out release/catalog.json.sig
+          rm -f /tmp/catalog.key
+          node scripts/trust.mjs verify --pub "$CATALOG_PUBLIC_KEY" \
+            --in release/catalog.json --sig release/catalog.json.sig
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ inputs.release_tag }}" \
+            release/catalog.json release/catalog.json.sig --clobber
+
+      - name: Publish for the app
+        run: |
+          set -euo pipefail
+          cp release/catalog.json docs/catalog.json
+          cp release/catalog.json.sig docs/catalog.json.sig
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/catalog.json docs/catalog.json.sig
+          git diff --cached --quiet || git commit -m "chore: catálogo republicado desde ${{ inputs.source_release }}"
+          git pull --rebase --autostash origin main
+          git push
