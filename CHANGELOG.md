@@ -25,6 +25,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 
 ### Añadido
 
+- Catálogo remoto firmado con Ed25519 (`scripts/trust.mjs`, `crates/wd-core/src/trust.rs`).
+  La app descarga `catalog.json` + `.sig`, verifica la firma, lo cachea y revalida la
+  caché; si no hay red usa la copia embebida, que también está firmada.
+- El catálogo se publica en GitHub Pages (`docs/catalog.json`) para tener una URL estable
+  y se adjunta al release de backends.
+
+
 - Workspace Rust con `wd-core` (detección + planificación) y `wd-cli`.
 - Detección de hardware en Linux (`/sys`, `/proc`, `lspci`, `nvidia-smi`, `rocminfo`,
   `vulkaninfo`) y en Windows (PowerShell/CIM, registro, `nvidia-smi`).
