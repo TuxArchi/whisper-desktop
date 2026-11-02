@@ -204,10 +204,11 @@
           </article>
         </div>
         <p class="muted small">
-          Los binarios se publican en
-          <a href="https://github.com/TuxArchi/whisper-desktop/releases">Releases</a>. Mientras
-          no exista un release de motores, la app avisa y no permite instalar: la descarga
-          exige hashes reales.
+          Los instaladores se publican en
+          <a href="https://github.com/TuxArchi/whisper-desktop/releases">Releases</a>. En el
+          primer arranque la app descarga el motor (whisper.cpp + ffmpeg, ~210 MB) desde el
+          release de backends, verificando el SHA-256 de cada archivo y la firma del catálogo
+          antes de ejecutar nada.
         </p>
       </section>
     </main>
@@ -220,7 +221,10 @@
       <p class="muted small">
         Motor <a href="https://github.com/ggml-org/whisper.cpp">whisper.cpp</a> (MIT) ·
         modelos de <a href="https://github.com/openai/whisper">OpenAI Whisper</a> (MIT) ·
-        ffmpeg (LGPL). Código propio bajo <a href="https://github.com/TuxArchi/whisper-desktop/blob/main/LICENSE">MIT</a>.
+        ffmpeg (LGPL). Nuestro código, <a href="https://github.com/TuxArchi/whisper-desktop/blob/main/LICENSE">MIT</a>.
+        Avisos completos en <a href="https://github.com/TuxArchi/whisper-desktop/blob/main/THIRD-PARTY.md">THIRD-PARTY.md</a>
+        y <a href="https://github.com/TuxArchi/whisper-desktop/blob/main/NOTICES.md">NOTICES.md</a>.
+        Proyecto independiente: no afiliado a OpenAI.
       </p>
     </footer>
   </body>
