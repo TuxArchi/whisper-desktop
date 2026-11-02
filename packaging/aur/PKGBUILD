@@ -12,7 +12,7 @@
 # The release workflow does exactly that and uploads the .pkg.tar.zst.
 
 pkgname=whisper-desktop
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
 pkgdesc="Transcribe y traduce audio en local, con detección automática de hardware"
 arch=('x86_64')
