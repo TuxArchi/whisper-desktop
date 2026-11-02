@@ -121,7 +121,9 @@ jobs:
       - name: Dependencies
         run: |
           apt-get update
-          apt-get install -y cmake build-essential git
+          # The dev image ships the toolchain but not every library: ggml links
+          # against hipBLAS explicitly.
+          apt-get install -y cmake build-essential git hipblas-dev rocblas-dev
 
       - name: Fetch whisper.cpp
         run: git clone --depth 1 --branch "v${WHISPER_VERSION}" "$WHISPER_REPO" whisper.cpp

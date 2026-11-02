@@ -18,7 +18,7 @@
     {
       "id": "cuda",
       "platform": "windows-x86_64",
-      "file": "whisper-{version}-windows-x64-cuda12.zip",
+      "file": "whisper-{version}-windows-x64-cuda.zip",
       "priority": 30
     },
     {
@@ -36,7 +36,7 @@
     {
       "id": "cuda",
       "platform": "linux-x86_64",
-      "file": "whisper-{version}-linux-x64-cuda12.tar.gz",
+      "file": "whisper-{version}-linux-x64-cuda.tar.gz",
       "priority": 30
     },
     {
