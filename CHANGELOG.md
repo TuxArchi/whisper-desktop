@@ -25,6 +25,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 
 ### Añadido
 
+- Instalador universal `.run` para Linux: sin root, instala en `~/.local/share`,
+  crea menú, icono y comando, y se desinstala con `--uninstall`.
+- Paquete de Arch `.pkg.tar.zst` generado desde el binario del release.
+- El binario acepta `--detect-only`, `--integrate`, `--unintegrate` y `--version`
+  sin abrir ventana.
+- SIGPIPE restaurado: `--detect-only | head` ya no provoca un panic.
+
+
 - Catálogo remoto firmado con Ed25519 (`scripts/trust.mjs`, `crates/wd-core/src/trust.rs`).
   La app descarga `catalog.json` + `.sig`, verifica la firma, lo cachea y revalida la
   caché; si no hay red usa la copia embebida, que también está firmada.

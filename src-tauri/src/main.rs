@@ -1,6 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // Rust ignores SIGPIPE, so writing to a closed pipe (`--detect-only | head`)
+    // aborts with a panic. Restore the default behaviour for a CLI.
+    #[cfg(unix)]
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
+
     // `--detect-only`, `--integrate` and friends never open a window: the
     // `.run` installer and diagnostics depend on that.
     let args: Vec<String> = std::env::args().skip(1).collect();
