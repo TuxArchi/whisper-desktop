@@ -43,9 +43,11 @@ stage="${out}/stage-${backend}"
 rm -rf "$stage"
 mkdir -p "$stage"
 
-# Everything the backend needs lives in build/bin: the CLI, the benchmark and
-# the shared libraries it dlopens at runtime.
+# Executables live in build/bin, but with BUILD_SHARED_LIBS=ON the libraries
+# are written to build/src and build/ggml/src. Both must end up side by side
+# or the binaries fail with "cannot open shared object file".
 cp -a build/bin/. "$stage/"
+find build \( -name '*.so' -o -name '*.so.*' \) -exec cp -a {} "$stage/" \;
 
 # Strip what is safe to strip; a missing strip must not fail the build.
 find "$stage" -type f \( -name 'whisper-*' -o -name '*.so*' \) -exec strip --strip-unneeded {} + 2>/dev/null || true

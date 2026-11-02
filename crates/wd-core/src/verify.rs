@@ -22,6 +22,9 @@ impl VerifyReport {
 /// Reads the backend line whisper.cpp writes to stderr, e.g.
 /// `whisper_backend_init_gpu: using Vulkan0 backend`.
 pub fn parse_backend(log: &str) -> Option<BackendId> {
+    let mut no_gpu = false;
+    let mut cpu_device = false;
+
     for line in log.lines() {
         let line = line.to_ascii_lowercase();
         if !line.contains("backend") {
@@ -30,7 +33,7 @@ pub fn parse_backend(log: &str) -> Option<BackendId> {
         if line.contains("using cuda") {
             return Some(BackendId::Cuda);
         }
-        if line.contains("using vulkan") || line.contains("using vulkan0") {
+        if line.contains("using vulkan") {
             return Some(BackendId::Vulkan);
         }
         if line.contains("using rocm") || line.contains("using hip") {
@@ -39,8 +42,21 @@ pub fn parse_backend(log: &str) -> Option<BackendId> {
         if line.contains("using cpu") {
             return Some(BackendId::Cpu);
         }
+        // A CPU-only build never says "using CPU backend": it reports that no
+        // GPU was found and initialises device 0 as CPU.
+        if line.contains("no gpu found") {
+            no_gpu = true;
+        }
+        if line.contains("device 0: cpu") {
+            cpu_device = true;
+        }
     }
-    None
+
+    if no_gpu || cpu_device {
+        Some(BackendId::Cpu)
+    } else {
+        None
+    }
 }
 
 /// Real time factor: audio seconds processed per second of wall clock.
@@ -104,6 +120,18 @@ mod tests {
             Some(BackendId::Cpu)
         );
         assert_eq!(parse_backend("no backend mentioned"), None);
+
+        // Real output of a CPU-only build on whisper.cpp 1.8.4.
+        let cpu_log = "whisper_init_with_params_no_state: devices    = 1\n\
+whisper_init_with_params_no_state: backends   = 1\n\
+whisper_backend_init_gpu: device 0: CPU (type: 0)\n\
+whisper_backend_init_gpu: no GPU found";
+        assert_eq!(parse_backend(cpu_log), Some(BackendId::Cpu));
+
+        // Real output of a Vulkan build that loaded the GPU.
+        let vk_log = "whisper_backend_init_gpu: device 0: Vulkan0 (type: 1)\n\
+whisper_backend_init_gpu: using Vulkan0 backend";
+        assert_eq!(parse_backend(vk_log), Some(BackendId::Vulkan));
     }
 
     #[test]
