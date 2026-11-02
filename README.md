@@ -9,6 +9,7 @@
 [![CI](https://github.com/TuxArchi/whisper-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/TuxArchi/whisper-desktop/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux-informational)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Inv%C3%ADtame%20un%20caf%C3%A9-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/tuxarchi)
 
 **[Sitio web](https://tuxarchi.github.io/whisper-desktop/) · [Releases](https://github.com/TuxArchi/whisper-desktop/releases)**
 
@@ -97,6 +98,14 @@ cargo run -p wd-cli -- --detect-only
 ```
 
 La GUI (Tauri + React) se añade en la siguiente fase; ver [`docs/BUILDING.md`](docs/BUILDING.md).
+
+## Apoyar el proyecto
+
+Whisper Desktop es gratuito, sin telemetría y sin cuenta. Si te ahorra tiempo,
+puedes invitarme a un café: el dinero va a tiempo de desarrollo y a los runners
+de CI que compilan los backends.
+
+[![Invítame un café en Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tuxarchi)
 
 ## Créditos y licencias
 

@@ -540,3 +540,27 @@ button.link {
   font-size: 13px;
   margin: 0;
 }
+
+/* --- Ko-fi --------------------------------------------------------------- */
+.btn.kofi {
+  background: #ff5e5b;
+  color: #fff;
+  border-color: transparent;
+}
+
+.btn.kofi:hover {
+  background: #ff7a77;
+  text-decoration: none;
+}
+
+.nav nav a.kofi {
+  color: #fff;
+}
+
+.support {
+  text-align: center;
+}
+
+.support .btn {
+  margin-top: 8px;
+}
