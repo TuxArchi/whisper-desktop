@@ -67,6 +67,8 @@ export default function Studio({ state }: { state: AppState }) {
   const [keepCopy, setKeepCopy] = useState(false);
   const [dataMessage, setDataMessage] = useState<string | null>(null);
   const [dataProgress, setDataProgress] = useState<number | null>(null);
+  const [repairMessage, setRepairMessage] = useState<string | null>(null);
+  const [repairing, setRepairing] = useState(false);
 
   const addFiles = useCallback((paths: string[]) => {
     const usable = paths
@@ -324,6 +326,21 @@ export default function Studio({ state }: { state: AppState }) {
       setDataMessage(String(cause));
     } finally {
       setDataProgress(null);
+    }
+  }
+
+  async function repairEngine() {
+    setRepairing(true);
+    setRepairMessage("Descargando el motor de nuevo…");
+    try {
+      await ipc("repair_engine");
+      setRepairMessage(
+        "Motor reinstalado y verificado. Vuelve a intentar la transcripción.",
+      );
+    } catch (cause) {
+      setRepairMessage(String(cause));
+    } finally {
+      setRepairing(false);
     }
   }
 
@@ -614,6 +631,24 @@ export default function Studio({ state }: { state: AppState }) {
           </div>
         )}
         {dataMessage && <p className="muted small">{dataMessage}</p>}
+      </section>
+
+      <section className="card">
+        <h2>Mantenimiento del motor</h2>
+        <p className="muted small">
+          Si la transcripción falla al arrancar (por ejemplo, tras una actualización
+          del motor), descarga de nuevo los binarios del backend que usas. No toca
+          los modelos ni tus transcripciones.
+        </p>
+        <div className="actions">
+          <span className="muted small">
+            Motor actual: <strong>{state.platform}</strong>
+          </span>
+          <button className="ghost" disabled={repairing} onClick={repairEngine}>
+            {repairing ? "Reparando…" : "Reparar motor"}
+          </button>
+        </div>
+        {repairMessage && <p className="muted small">{repairMessage}</p>}
       </section>
 
       <section className="card">

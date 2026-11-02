@@ -237,6 +237,43 @@ fn install_blocking(
         .map_err(|error| error.to_string())
 }
 
+/// Re-downloads the installed backend from the current catalogue. Used when the
+/// engine is broken or was published with a bad build.
+#[tauri::command]
+async fn repair_engine(app: tauri::AppHandle) -> Result<Manifest, String> {
+    tauri::async_runtime::spawn_blocking(move || repair_blocking(&app))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn repair_blocking(app: &tauri::AppHandle) -> Result<Manifest, String> {
+    let app_paths = resolved_paths();
+    let catalog = load_catalog()?;
+    let manifest = Manifest::load(&app_paths.manifest_file).map_err(|error| error.to_string())?;
+
+    let mut emit = |event: InstallEvent| {
+        let _ = app.emit("install:event", &event);
+    };
+
+    let refreshed = wd_core::installer::refresh_backend(
+        &app_paths,
+        &catalog,
+        manifest.backend,
+        Platform::current(),
+        env!("CARGO_PKG_VERSION"),
+        &wd_core::download::HttpFetcher,
+        &mut emit,
+    )
+    .map_err(|error| error.to_string())?;
+
+    let mut config = wd_core::config::Config::load_or_default(&app_paths.config_file);
+    config.install.backend = Some(refreshed.backend.as_str().to_string());
+    config.install.backend_dir = Some(format!("backends/{}", refreshed.backend.as_str()));
+    config.save(&app_paths.config_file).ok();
+
+    Ok(refreshed)
+}
+
 #[tauri::command]
 async fn verify_installation() -> Result<VerifyView, String> {
     tauri::async_runtime::spawn_blocking(verify_blocking)
@@ -399,7 +436,8 @@ pub fn run() {
             studio::scan_folder,
             studio::initial_files,
             studio::data_info,
-            studio::relocate_data
+            studio::relocate_data,
+            repair_engine
         ])
         .run(tauri::generate_context!())
         .expect("error al iniciar Whisper Desktop");

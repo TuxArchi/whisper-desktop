@@ -4,6 +4,8 @@
 //! never looks complete. Archives are verified before extraction and removed
 //! afterwards.
 
+use std::path::Path;
+
 use crate::catalog::{Catalog, Platform};
 use crate::config::Config;
 use crate::decide::{BackendId, InstallPlan};
@@ -50,7 +52,6 @@ pub fn install<F: Fetcher>(
     emit: &mut dyn FnMut(InstallEvent),
 ) -> Result<Manifest, InstallError> {
     let paths = request.paths;
-    let platform_name = request.platform.as_str().to_string();
     let backend_id = request.plan.backend.as_str();
 
     paths.ensure()?;
@@ -58,30 +59,15 @@ pub fn install<F: Fetcher>(
     std::fs::create_dir_all(&cache)?;
 
     // --- 1. inference backend ------------------------------------------------
-    let backend = request
-        .catalog
-        .backend(request.plan.backend, request.platform)
-        .ok_or_else(|| InstallError::MissingArtifact {
-            kind: "backend".to_string(),
-            target: format!("{backend_id}/{platform_name}"),
-        })?;
-
-    emit(InstallEvent::Step {
-        id: "backend".to_string(),
-        label: format!("Motor {backend_id}"),
-    });
-    let backend_archive = cache.join(file_name_from_url(&backend.artifact.url));
-    fetcher.fetch(
-        &backend.artifact.url,
-        &backend_archive,
-        &backend.artifact.sha256,
-        &mut |done, total| emit(InstallEvent::Progress { done, total }),
+    install_backend(
+        request.catalog,
+        request.plan.backend,
+        request.platform,
+        paths,
+        &cache,
+        fetcher,
+        emit,
     )?;
-
-    let backend_dir = paths.backend_dir(backend_id);
-    clear_dir(&backend_dir)?;
-    extract::extract(&backend_archive, &backend_dir)?;
-    std::fs::remove_file(&backend_archive).ok();
 
     // --- 2. ffmpeg -----------------------------------------------------------
     if let Some(tool) = request.catalog.tool("ffmpeg-lgpl", request.platform) {
@@ -206,6 +192,84 @@ pub fn fit_plan_to_catalog(plan: &InstallPlan, catalog: &Catalog, platform: Plat
         plan: adjusted,
         notes,
     }
+}
+
+/// Downloads, verifies and extracts a single backend. Shared by the full
+/// installation and by the repair flow.
+fn install_backend<F: Fetcher>(
+    catalog: &Catalog,
+    backend: BackendId,
+    platform: Platform,
+    paths: &AppPaths,
+    cache: &Path,
+    fetcher: &F,
+    emit: &mut dyn FnMut(InstallEvent),
+) -> Result<(), InstallError> {
+    let backend_id = backend.as_str();
+    let entry =
+        catalog
+            .backend(backend, platform)
+            .ok_or_else(|| InstallError::MissingArtifact {
+                kind: "backend".to_string(),
+                target: format!("{backend_id}/{}", platform.as_str()),
+            })?;
+
+    emit(InstallEvent::Step {
+        id: "backend".to_string(),
+        label: format!("Motor {backend_id}"),
+    });
+
+    let archive = cache.join(file_name_from_url(&entry.artifact.url));
+    fetcher.fetch(
+        &entry.artifact.url,
+        &archive,
+        &entry.artifact.sha256,
+        &mut |done, total| emit(InstallEvent::Progress { done, total }),
+    )?;
+
+    let dir = paths.backend_dir(backend_id);
+    clear_dir(&dir)?;
+    extract::extract(&archive, &dir)?;
+    std::fs::remove_file(&archive).ok();
+    Ok(())
+}
+
+/// Re-downloads the current backend and refreshes the manifest, keeping the
+/// models and the configuration. Used when the installed engine is broken or
+/// outdated (for example after a release that shipped a non-portable build).
+pub fn refresh_backend<F: Fetcher>(
+    paths: &AppPaths,
+    catalog: &Catalog,
+    backend: BackendId,
+    platform: Platform,
+    app_version: &str,
+    fetcher: &F,
+    emit: &mut dyn FnMut(InstallEvent),
+) -> Result<Manifest, InstallError> {
+    paths.ensure()?;
+    let cache = paths.data.join(".cache");
+    std::fs::create_dir_all(&cache)?;
+
+    install_backend(catalog, backend, platform, paths, &cache, fetcher, emit)?;
+
+    emit(InstallEvent::Step {
+        id: "manifest".to_string(),
+        label: "Manifest".to_string(),
+    });
+
+    let mut files = extract::collect_files(&paths.backend_dir(backend.as_str()), &paths.root)?;
+    files.extend(extract::collect_files(&paths.bin, &paths.root)?);
+
+    let mut manifest = Manifest::load(&paths.manifest_file)
+        .unwrap_or_else(|_| Manifest::new(app_version, backend, files.clone()));
+    manifest.backend = backend;
+    manifest.app_version = app_version.to_string();
+    manifest.files = files;
+    manifest.save(&paths.manifest_file)?;
+
+    std::fs::remove_dir_all(&cache).ok();
+    emit(InstallEvent::Finished);
+    Ok(manifest)
 }
 
 fn file_name_from_url(url: &str) -> String {
@@ -500,5 +564,107 @@ mod tests {
         let fit = fit_plan_to_catalog(&plan, &catalog, Platform::LinuxX64);
         assert_eq!(fit.plan, plan);
         assert!(fit.notes.is_empty());
+    }
+    #[test]
+    fn refresh_replaces_the_binary_and_keeps_models() {
+        use crate::catalog::{Artifact, CatalogBackend, CatalogModel};
+        use crate::decide::{BackendId, ModelVariant};
+
+        let dir = std::env::temp_dir().join(format!("wd-refresh-{}", std::process::id()));
+        let downloads = dir.join("downloads");
+        let app = dir.join("app");
+        std::fs::create_dir_all(&downloads).unwrap();
+        std::fs::create_dir_all(&app).unwrap();
+
+        let model_file = downloads.join("ggml-small.bin");
+        std::fs::write(&model_file, b"weights").unwrap();
+        let model_sha = crate::download::sha256_file(&model_file).unwrap();
+
+        let catalog_with = |archive: &Path| Catalog {
+            schema: 1,
+            channel: "test".into(),
+            min_app_version: None,
+            backends: vec![CatalogBackend {
+                id: "cpu".into(),
+                platform: Platform::LinuxX64,
+                priority: 10,
+                artifact: Artifact {
+                    url: "https://example.com/backend.tar.gz".into(),
+                    sha256: crate::download::sha256_file(archive).unwrap(),
+                    size: 1024,
+                },
+                env: Default::default(),
+            }],
+            tools: vec![],
+            models: vec![CatalogModel {
+                id: "small".into(),
+                file: "ggml-small.bin".into(),
+                url: "https://example.com/ggml-small.bin".into(),
+                sha256: model_sha.clone(),
+                size: 7,
+                vram_mb: 1024,
+                multilingual: true,
+            }],
+        };
+
+        // First install: the engine contains "v1".
+        let v1 = downloads.join("backend-v1.tar.gz");
+        build_tar_gz(&v1, &[("whisper-cli", b"v1")]);
+        std::fs::rename(&v1, downloads.join("backend.tar.gz")).unwrap();
+        let archive = downloads.join("backend.tar.gz");
+
+        let paths = crate::paths::resolve(&app);
+        paths.ensure().unwrap();
+        let plan = InstallPlan {
+            backend: BackendId::Cpu,
+            fallbacks: vec![],
+            model: "small".into(),
+            variant: ModelVariant::Fp16,
+            threads: 4,
+            reasons: vec![],
+            warnings: vec![],
+        };
+        let request = InstallRequest {
+            plan: &plan,
+            paths: &paths,
+            catalog: &catalog_with(&archive),
+            platform: Platform::LinuxX64,
+            app_version: "0.1.0".into(),
+        };
+        let fetcher = LocalFetcher {
+            root: downloads.clone(),
+        };
+        install(&request, &fetcher, &mut |_| {}).unwrap();
+        assert_eq!(
+            std::fs::read(app.join("backends/cpu/whisper-cli")).unwrap(),
+            b"v1"
+        );
+
+        // Refresh with a different build: the binary changes, the model stays.
+        let v2 = downloads.join("backend-v2.tar.gz");
+        build_tar_gz(&v2, &[("whisper-cli", b"v2-portable")]);
+        std::fs::copy(&v2, &archive).unwrap();
+
+        let refreshed = refresh_backend(
+            &paths,
+            &catalog_with(&archive),
+            BackendId::Cpu,
+            Platform::LinuxX64,
+            "0.1.4",
+            &fetcher,
+            &mut |_| {},
+        )
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read(app.join("backends/cpu/whisper-cli")).unwrap(),
+            b"v2-portable"
+        );
+        assert_eq!(refreshed.models, vec!["ggml-small.bin"]);
+        assert!(paths.model_path("ggml-small.bin").exists());
+        assert_eq!(refreshed.app_version, "0.1.4");
+        assert!(refreshed.is_installed(&app));
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }
