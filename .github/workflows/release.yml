@@ -176,9 +176,16 @@ jobs:
 
       - name: Checksums
         run: |
+          set -euo pipefail
           cd dist
           # The raw binary is only shared between jobs, not for download.
           rm -f whisper-desktop
+          # download-artifact keeps the "deb/" and "rpm/" folders of the
+          # bundler layout; flatten them so the release has a flat file list.
+          for file in deb/*.deb rpm/*.rpm; do
+            [ -e "$file" ] && mv "$file" .
+          done
+          rmdir deb rpm 2>/dev/null || true
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
