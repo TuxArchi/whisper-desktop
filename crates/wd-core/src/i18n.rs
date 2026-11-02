@@ -242,6 +242,15 @@ pub fn render(reason: &Reason, lang: Lang) -> String {
                     .to_string()
             }
         }
+        "warn.rocm_no_runtime" => {
+            if es {
+                "ROCm accesible, pero falta su runtime (libamdhip64). Se usará Vulkan: instala ROCm si quieres la ruta nativa"
+                    .to_string()
+            } else {
+                "ROCm is reachable but its runtime (libamdhip64) is missing; using Vulkan. Install ROCm for the native path"
+                    .to_string()
+            }
+        }
         "warn.vram_unknown" => {
             if es {
                 "No se pudo leer la VRAM; se elige un modelo conservador".to_string()

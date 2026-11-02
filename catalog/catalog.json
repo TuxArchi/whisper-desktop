@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "channel": "stable",
-  "generated": "2026-11-02T05:38:06.099Z",
+  "generated": "2026-11-02T18:06:37.018Z",
   "minAppVersion": "0.1.0",
   "backends": [
     {
@@ -9,9 +9,9 @@
       "platform": "linux-x86_64",
       "priority": 10,
       "artifact": {
-        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/whisper-1.8.4-linux-x64-cpu.tar.gz",
-        "sha256": "d8e071588b140c99cec4e3b7391f92760ba6c7a92824f2a4fc8e628762752fe0",
-        "size": 2014150
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r4/whisper-1.8.4-linux-x64-cpu.tar.gz",
+        "sha256": "2a867e44be62bb4ffabff85847458b13750a548efc91d5d2c20bb69a02ce96de",
+        "size": 2014147
       },
       "env": {}
     },
@@ -20,9 +20,31 @@
       "platform": "linux-x86_64",
       "priority": 20,
       "artifact": {
-        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/whisper-1.8.4-linux-x64-vulkan.tar.gz",
-        "sha256": "14a1e4a297324f0cd10721be853037428b20a7941a282ec86b4ddc10c8fd93bd",
-        "size": 19060055
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r4/whisper-1.8.4-linux-x64-vulkan.tar.gz",
+        "sha256": "c4ab623600f95aecce5298ca4b0e264b51d5a78492c5a65184300234ae61de1b",
+        "size": 19095710
+      },
+      "env": {}
+    },
+    {
+      "id": "cuda",
+      "platform": "linux-x86_64",
+      "priority": 30,
+      "artifact": {
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r4/whisper-1.8.4-linux-x64-cuda.tar.gz",
+        "sha256": "7d2ed26afd4bf8dccff214363a6202b6118edbbd2e94f75ecd8ddc3156efd544",
+        "size": 195585028
+      },
+      "env": {}
+    },
+    {
+      "id": "rocm",
+      "platform": "linux-x86_64",
+      "priority": 40,
+      "artifact": {
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r4/whisper-1.8.4-linux-x64-rocm.tar.gz",
+        "sha256": "64f4dc071ce1fd94c5310b83b5dce055c6537f9667453a0bd5c4b12c756882c5",
+        "size": 59844696
       },
       "env": {}
     }
@@ -33,9 +55,9 @@
       "platform": "windows-x86_64",
       "version": "n7.1",
       "artifact": {
-        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/ffmpeg-lgpl-win64.zip",
-        "sha256": "240555aec42bccd15664d2020a03b0bb9c77b5264bf1ebe12d4464bca66680a6",
-        "size": 57200559
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r4/ffmpeg-lgpl-win64.zip",
+        "sha256": "271c38f8adb629adbf3766bc96d0d1087c15fad16a7db78ad749a1604938ee5b",
+        "size": 57206545
       }
     },
     {
@@ -43,9 +65,9 @@
       "platform": "linux-x86_64",
       "version": "n7.1",
       "artifact": {
-        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/ffmpeg-lgpl-linux64.tar.gz",
-        "sha256": "5c9aba43897166182baa32fe6743430ea0c7e7510feb785e97cb8fb75c7403be",
-        "size": 60607179
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r4/ffmpeg-lgpl-linux64.tar.gz",
+        "sha256": "186f6875b33897139f59123046f02b9276ab01ea1bb430ff03b5cd6b1c2f419f",
+        "size": 60612566
       }
     }
   ],

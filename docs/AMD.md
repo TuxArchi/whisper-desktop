@@ -25,9 +25,22 @@ no hace falta instalar ROCm en el sistema ni tocar ningún archivo.
 |---|---|
 | AMD en Windows, cualquier generación | Binario **Vulkan**. Cero configuración |
 | AMD RDNA4 / Ryzen AI en Windows | Binario **ROCm** (runtime embebido) |
-| AMD RDNA3/4 en Linux | Binario **ROCm** si `/dev/kfd` es accesible |
+| AMD RDNA3/4 en Linux | Binario **ROCm** si `/dev/kfd` es accesible **y** el runtime de ROCm está instalado |
 | AMD RDNA1/2, Vega, GCN en Linux | **Vulkan** |
 | Cualquier caso dudoso | **Vulkan**, y la verificación confirma si funciona |
+
+## El runtime de ROCm no va incluido
+
+El backend de ROCm pesa ~57 MB porque **no empaqueta el runtime**: enlaza contra
+`libamdhip64`, `rocBLAS` y compañía, que vienen con la instalación de ROCm del
+sistema. Por eso el planificador exige **dos** condiciones antes de elegirlo:
+
+1. `/dev/kfd` accesible (driver `amdgpu` y permisos).
+2. `libamdhip64.so` presente (runtime instalado).
+
+Si falta el runtime, la app **no instala ROCm**: usa Vulkan y avisa. Es
+deliberado: instalar un backend que no puede arrancar es peor que usar el que
+funciona, y la verificación posterior lo confirmaría de todas formas.
 
 ## Permisos en Linux
 

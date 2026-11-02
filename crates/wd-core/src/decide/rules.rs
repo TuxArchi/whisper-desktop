@@ -78,7 +78,7 @@ fn choose_backend(
             ) && report
                 .rocm
                 .as_ref()
-                .map(|r| r.kfd_accessible)
+                .map(|r| r.kfd_accessible && r.runtime_available)
                 .unwrap_or(false)
         } else {
             false
@@ -97,7 +97,16 @@ fn choose_backend(
         ) {
             // ROCm-capable silicon, but the runtime cannot reach the device.
             reasons.push(Reason::new("backend.vulkan.amd_linux").arg("family", family.as_str()));
-            warnings.push(Reason::new("warn.rocm_no_kfd"));
+            if report
+                .rocm
+                .as_ref()
+                .map(|r| r.kfd_accessible && !r.runtime_available)
+                .unwrap_or(false)
+            {
+                warnings.push(Reason::new("warn.rocm_no_runtime"));
+            } else {
+                warnings.push(Reason::new("warn.rocm_no_kfd"));
+            }
         } else {
             // RDNA1/2, Vega, GCN: not in the ROCm support matrix at all.
             reasons

@@ -304,4 +304,8 @@ pub struct RocmInfo {
     pub kfd_accessible: bool,
     #[serde(default)]
     pub groups_ok: bool,
+    /// `libamdhip64` present. Our ROCm backend does not bundle the runtime, so
+    /// without it the binary would not even start.
+    #[serde(default)]
+    pub runtime_available: bool,
 }

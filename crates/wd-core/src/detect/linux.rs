@@ -332,10 +332,23 @@ fn rocm_info() -> Option<RocmInfo> {
         .write(true)
         .open("/dev/kfd")
         .is_ok();
+
+    // The runtime is not bundled with our backend: without it the binary fails
+    // with "cannot open shared object file".
+    let runtime_available = [
+        "/opt/rocm/lib/libamdhip64.so",
+        "/usr/lib/x86_64-linux-gnu/libamdhip64.so",
+        "/usr/lib64/libamdhip64.so",
+        "/usr/lib/libamdhip64.so",
+    ]
+    .iter()
+    .any(|path| Path::new(path).exists());
+
     Some(RocmInfo {
         gfx_target,
         kfd_accessible,
         groups_ok: kfd_accessible,
+        runtime_available,
     })
 }
 
