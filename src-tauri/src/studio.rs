@@ -291,7 +291,7 @@ fn run_request(app: &tauri::AppHandle, request: JobRequest) -> Result<JobSummary
         let result = transcriber::run_job(
             &spec,
             &plan,
-            &paths.ffmpeg(),
+            Some(&paths.ffmpeg()),
             &SystemRunner,
             &CANCEL,
             &mut |percent| {

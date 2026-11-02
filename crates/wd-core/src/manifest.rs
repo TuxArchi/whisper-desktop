@@ -104,7 +104,9 @@ impl Manifest {
     /// Resolves a manifest entry to an absolute path, refusing paths that
     /// escape the application root.
     pub fn resolve(&self, root: &Path, relative: &str) -> Option<PathBuf> {
-        if relative.contains("..") || Path::new(relative).is_absolute() {
+        // `is_absolute()` is false for "/etc/passwd" on Windows, but it still
+        // escapes the root; `has_root()` catches both.
+        if relative.contains("..") || Path::new(relative).has_root() {
             return None;
         }
         Some(root.join(relative))

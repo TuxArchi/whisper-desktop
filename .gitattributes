@@ -1,0 +1,13 @@
+# Fixtures are signed byte-for-byte: line-ending conversion would break the
+# Ed25519 verification (the signature covers the exact bytes).
+tests/fixtures/** -text
+*.sig -text
+
+# Binary assets must never be touched.
+*.png binary
+*.ico binary
+*.zst binary
+*.gz binary
+*.zip binary
+
+* text=auto

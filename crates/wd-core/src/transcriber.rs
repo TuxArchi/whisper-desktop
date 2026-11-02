@@ -176,10 +176,12 @@ pub struct JobOutcome {
 }
 
 /// Runs the whole job: normalise, then one command per task run.
+/// `ffmpeg` is optional so the flow can be tested without an external binary;
+/// production always passes it.
 pub fn run_job(
     spec: &JobSpec,
     plan: &OutputPlan,
-    ffmpeg: &Path,
+    ffmpeg: Option<&Path>,
     runner: &dyn ProcessRunner,
     cancel: &AtomicBool,
     on_progress: &mut dyn FnMut(u8),
@@ -187,7 +189,9 @@ pub fn run_job(
     // whisper does not create directories: a missing output folder would
     // silently drop every result.
     std::fs::create_dir_all(&plan.dir)?;
-    normalize_audio(ffmpeg, &spec.source, &spec.audio)?;
+    if let Some(ffmpeg) = ffmpeg {
+        normalize_audio(ffmpeg, &spec.source, &spec.audio)?;
+    }
 
     let commands = crate::job::build_commands(spec, plan);
     let total = commands.len().max(1);
@@ -302,14 +306,9 @@ mod tests {
         let cancel = AtomicBool::new(false);
         let mut progress = Vec::new();
 
-        let outcome = run_job(
-            &job,
-            &plan,
-            Path::new("/bin/true"),
-            &runner,
-            &cancel,
-            &mut |percent| progress.push(percent),
-        )
+        let outcome = run_job(&job, &plan, None, &runner, &cancel, &mut |percent| {
+            progress.push(percent)
+        })
         .unwrap();
 
         assert!(outcome.ok);
@@ -333,15 +332,7 @@ mod tests {
             write_translation: false,
         };
         let cancel = AtomicBool::new(false);
-        let outcome = run_job(
-            &job,
-            &plan,
-            Path::new("/bin/true"),
-            &runner,
-            &cancel,
-            &mut |_| {},
-        )
-        .unwrap();
+        let outcome = run_job(&job, &plan, None, &runner, &cancel, &mut |_| {}).unwrap();
 
         assert_eq!(outcome.outputs.len(), 4);
         assert!(outcome
@@ -362,15 +353,7 @@ mod tests {
         };
         let cancel = Arc::new(AtomicBool::new(true));
 
-        let error = run_job(
-            &job,
-            &plan,
-            Path::new("/bin/true"),
-            &runner,
-            &cancel,
-            &mut |_| {},
-        )
-        .unwrap_err();
+        let error = run_job(&job, &plan, None, &runner, &cancel, &mut |_| {}).unwrap_err();
         assert!(matches!(error, TranscribeError::Cancelled));
 
         std::fs::remove_dir_all(job.backend_dir.parent().unwrap()).ok();
