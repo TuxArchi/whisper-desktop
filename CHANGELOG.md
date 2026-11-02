@@ -5,6 +5,24 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 
 ## [No publicado]
 
+### Corregido (encontrados instalando de verdad)
+
+- `build-backend.sh` empaquetaba solo `build/bin`: las `.so` viven en
+  `build/src` y `build/ggml/src`, así que el motor fallaba al arrancar con
+  «cannot open shared object file».
+- La verificación no reconocía un build de CPU: whisper.cpp imprime
+  «no GPU found», no «using CPU backend».
+- Los comandos no incluían `-of`, así que whisper escribía junto al audio de
+  trabajo con el nombre del WAV en vez de en la carpeta de salida.
+- El directorio de salida no se creaba antes de transcribir.
+- El manifest incluía enlaces simbólicos y comparaba el tamaño del enlace con
+  el del archivo de destino, por lo que la instalación se daba por rota.
+- Los tests de «mover datos» escribían en el `location.txt` real del usuario;
+  ahora la ruta del puntero es un parámetro.
+- `make-catalog.mjs` no se ejecutaba desde rutas con espacios.
+- El plan no se adaptaba a lo publicado: si el catálogo no tenía el backend o
+  el modelo recomendados, fallaba en vez de usar la mejor alternativa.
+
 ### Añadido
 
 - Workspace Rust con `wd-core` (detección + planificación) y `wd-cli`.

@@ -62,6 +62,7 @@ pub fn relocate(
     paths: &AppPaths,
     target: &Path,
     keep_copy: bool,
+    location_pointer: &Path,
     progress: &mut dyn FnMut(u64, u64),
 ) -> Result<RelocateReport, RelocateError> {
     let target = normalize(target);
@@ -127,7 +128,7 @@ pub fn relocate(
 
     // From here on the copy is verified. Point the application at the new
     // location before removing anything.
-    crate::paths::write_location_to(&crate::paths::location_file(), &target)?;
+    crate::paths::write_location_to(location_pointer, &target)?;
 
     if !keep_copy {
         for source in &sources {
@@ -246,9 +247,15 @@ mod tests {
         let target = root.join("nuevo-datos");
 
         let mut progress_values = Vec::new();
-        let report = relocate(&paths, &target, false, &mut |done, total| {
-            progress_values.push((done, total));
-        })
+        let report = relocate(
+            &paths,
+            &target,
+            false,
+            &root.join("location.txt"),
+            &mut |done, total| {
+                progress_values.push((done, total));
+            },
+        )
         .unwrap();
 
         assert_eq!(report.moved_files, 4);
@@ -274,7 +281,14 @@ mod tests {
         let (paths, root) = setup("keep");
         let target = root.join("copia");
 
-        let report = relocate(&paths, &target, true, &mut |_, _| {}).unwrap();
+        let report = relocate(
+            &paths,
+            &target,
+            true,
+            &root.join("location.txt"),
+            &mut |_, _| {},
+        )
+        .unwrap();
         assert!(report.kept_copy);
         assert!(paths.models.join("ggml-small.bin").exists());
         assert!(target.join("models/ggml-small.bin").exists());
@@ -285,11 +299,24 @@ mod tests {
     #[test]
     fn refuses_a_nested_target() {
         let (paths, root) = setup("nested");
-        let error =
-            relocate(&paths, &paths.data.join("dentro"), false, &mut |_, _| {}).unwrap_err();
+        let error = relocate(
+            &paths,
+            &paths.data.join("dentro"),
+            false,
+            &root.join("location.txt"),
+            &mut |_, _| {},
+        )
+        .unwrap_err();
         assert!(matches!(error, RelocateError::NestedTarget));
 
-        let error = relocate(&paths, &root, false, &mut |_, _| {}).unwrap_err();
+        let error = relocate(
+            &paths,
+            &root,
+            false,
+            &root.join("location.txt"),
+            &mut |_, _| {},
+        )
+        .unwrap_err();
         assert!(matches!(error, RelocateError::NestedTarget));
 
         std::fs::remove_dir_all(&root).ok();

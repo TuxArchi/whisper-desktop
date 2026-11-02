@@ -178,7 +178,6 @@ impl JobSpec {
 /// the UI says so before starting.
 pub fn build_commands(spec: &JobSpec, plan: &OutputPlan) -> Vec<WhisperCommand> {
     let program = spec.binary();
-    let mut commands = Vec::new();
 
     let mut base = vec![
         "-m".to_string(),
@@ -200,42 +199,54 @@ pub fn build_commands(spec: &JobSpec, plan: &OutputPlan) -> Vec<WhisperCommand> 
         });
     }
 
+    // `-of` is what tells whisper where to write. Without it the files land
+    // next to the input audio with the audio's own name.
+    let args_for = |stem: &Path| -> Vec<String> {
+        let mut args = base.clone();
+        args.push("-of".to_string());
+        args.push(stem.to_string_lossy().to_string());
+        args
+    };
+
+    let main_stem = plan.dir.join(&plan.stem);
+
     match spec.task {
-        Task::Transcribe => commands.push(WhisperCommand {
+        Task::Transcribe => vec![WhisperCommand {
             program,
-            args: base,
-            output_stem: plan.dir.join(&plan.stem),
+            args: args_for(&main_stem),
+            output_stem: main_stem,
             language: spec.language.clone(),
-        }),
+        }],
         Task::TranslateEn => {
-            let mut args = base;
+            let mut args = args_for(&main_stem);
             args.push("-tr".to_string());
-            commands.push(WhisperCommand {
+            vec![WhisperCommand {
                 program,
                 args,
-                output_stem: plan.dir.join(&plan.stem),
+                output_stem: main_stem,
                 language: "en".to_string(),
-            });
+            }]
         }
         Task::Both => {
-            commands.push(WhisperCommand {
-                program: program.clone(),
-                args: base.clone(),
-                output_stem: plan.dir.join(&plan.stem),
-                language: spec.language.clone(),
-            });
-            let mut translate = base;
-            translate.push("-tr".to_string());
-            commands.push(WhisperCommand {
-                program,
-                args: translate,
-                output_stem: plan.dir.join(format!("{}_en", plan.stem)),
-                language: "en".to_string(),
-            });
+            let translated_stem = plan.dir.join(format!("{}_en", plan.stem));
+            let mut translated_args = args_for(&translated_stem);
+            translated_args.push("-tr".to_string());
+            vec![
+                WhisperCommand {
+                    program: program.clone(),
+                    args: args_for(&main_stem),
+                    output_stem: main_stem,
+                    language: spec.language.clone(),
+                },
+                WhisperCommand {
+                    program,
+                    args: translated_args,
+                    output_stem: translated_stem,
+                    language: "en".to_string(),
+                },
+            ]
         }
     }
-
-    commands
 }
 
 /// whisper.cpp prints `whisper_print_progress_callback: progress =  42%`.
@@ -292,6 +303,13 @@ mod tests {
         assert!(command.args.contains(&"-osrt".to_string()));
         assert!(!command.args.contains(&"-tr".to_string()));
         assert_eq!(command.output_stem, PathBuf::from("/out/reunion"));
+        // Without -of, whisper writes next to the input audio.
+        let position = command
+            .args
+            .iter()
+            .position(|arg| arg == "-of")
+            .expect("-of");
+        assert_eq!(command.args[position + 1], "/out/reunion");
         assert_eq!(command.language, "auto");
     }
 

@@ -138,6 +138,12 @@ fn collect_into(dir: &Path, base: &Path, out: &mut Vec<ManifestFile>) -> Result<
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
+        // Symlinks (libfoo.so -> libfoo.so.1) are part of the package but do
+        // not have meaningful content: recording them makes the manifest
+        // compare a link's length against its target's and fail forever.
+        if entry.file_type()?.is_symlink() {
+            continue;
+        }
         let metadata = entry.metadata()?;
         if metadata.is_dir() {
             collect_into(&path, base, out)?;
@@ -211,6 +217,21 @@ mod tests {
             files.iter().find(|f| f.path == "whisper-cli").unwrap().size,
             6
         );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn collect_files_skips_symlinks() {
+        let dir = temp_dir("symlink");
+        let target = dir.join("libggml.so.0");
+        std::fs::write(&target, b"payload").unwrap();
+        std::os::unix::fs::symlink("libggml.so.0", dir.join("libggml.so")).unwrap();
+
+        let files = collect_files(&dir, &dir).unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].path, "libggml.so.0");
 
         std::fs::remove_dir_all(&dir).ok();
     }

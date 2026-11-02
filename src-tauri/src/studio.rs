@@ -524,6 +524,7 @@ pub async fn relocate_data(
             &paths,
             std::path::Path::new(&target),
             keep_copy,
+            &wd_core::paths::location_file(),
             &mut |done, total| {
                 // Throttle: one event every 200 ms is plenty for a progress bar.
                 if last_emit.elapsed().as_millis() >= 200 {

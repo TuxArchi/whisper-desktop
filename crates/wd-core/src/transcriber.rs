@@ -184,6 +184,9 @@ pub fn run_job(
     cancel: &AtomicBool,
     on_progress: &mut dyn FnMut(u8),
 ) -> Result<JobOutcome, TranscribeError> {
+    // whisper does not create directories: a missing output folder would
+    // silently drop every result.
+    std::fs::create_dir_all(&plan.dir)?;
     normalize_audio(ffmpeg, &spec.source, &spec.audio)?;
 
     let commands = crate::job::build_commands(spec, plan);
