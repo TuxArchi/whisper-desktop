@@ -3,6 +3,22 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 [SemVer](https://semver.org/lang/es/).
 
+## [0.1.5] - 2026-11-02
+
+### Corregido
+
+- **SIGILL al transcribir**: los motores se compilaban con `-march=native` en el
+  runner de CI (AVX-512) y abortaban en CPUs sin esa extensión. Ahora se
+  compilan 14 variantes y se elige en tiempo de ejecución
+  (`GGML_NATIVE=OFF`, `GGML_CPU_ALL_VARIANTS`, `GGML_BACKEND_DL`).
+- Elegir un modelo distinto del recomendado instalaba siempre el recomendado
+  (closure obsoleto en el asistente).
+
+### Añadido
+
+- Reparador de motor: re-descarga el backend conservando modelos y configuración.
+- Workflow `republish-catalog.yml` para regenerar el catálogo sin recompilar.
+
 ## [0.1.3] - 2026-11-02
 
 ### Añadido
