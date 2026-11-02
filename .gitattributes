@@ -1,5 +1,8 @@
+# Order matters: the LAST matching rule wins, so the catch-all goes first.
+* text=auto
+
 # Fixtures are signed byte-for-byte: line-ending conversion would break the
-# Ed25519 verification (the signature covers the exact bytes).
+# Ed25519 verification because the signature covers the exact bytes.
 tests/fixtures/** -text
 *.sig -text
 
@@ -9,5 +12,3 @@ tests/fixtures/** -text
 *.zst binary
 *.gz binary
 *.zip binary
-
-* text=auto

@@ -309,7 +309,10 @@ mod tests {
             .iter()
             .position(|arg| arg == "-of")
             .expect("-of");
-        assert_eq!(command.args[position + 1], "/out/reunion");
+        assert_eq!(
+            command.args[position + 1],
+            plan.dir.join(&plan.stem).to_string_lossy()
+        );
         assert_eq!(command.language, "auto");
     }
 
