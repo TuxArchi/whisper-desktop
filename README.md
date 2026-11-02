@@ -58,6 +58,8 @@ chmod +x WhisperDesktop-*.run
 
 ## Qué hace
 
+<img src="docs/assets/01-studio.png" alt="Studio de Whisper Desktop" width="100%" />
+
 - Arrastra audios o vídeos (mp3, wav, m4a, flac, ogg, mp4, mkv, mov…) y obtén TXT, SRT,
   VTT o JSON, con timestamps.
 - Transcribir, traducir al inglés, o ambas cosas en el mismo trabajo.
