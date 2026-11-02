@@ -3,6 +3,22 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 [SemVer](https://semver.org/lang/es/).
 
+## [0.1.2] - 2026-11-02
+
+### Corregido
+
+- Windows: la VRAM de una tarjeta de 8 GB se reportaba como 4 GB. `AdapterRAM`
+  satura en 4095 MB y tapaba el valor de `nvidia-smi`; ahora manda `nvidia-smi`
+  y el valor saturado se descarta. Nuevo campo `vramSource`.
+- Windows: al arrancar se abrían varias ventanas de PowerShell. Ahora toda la
+  detección va en una sola invocación y todos los procesos hijos se lanzan con
+  `CREATE_NO_WINDOW` (incluidos ffmpeg y whisper-cli durante la transcripción).
+
+### Añadido
+
+- Selector de modelo en la pantalla de recomendación, con tamaño, VRAM estimada
+  y aviso si el modelo no cabe en la GPU.
+
 ## [No publicado]
 
 ### Corregido (encontrados instalando de verdad)
