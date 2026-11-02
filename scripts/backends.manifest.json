@@ -38,12 +38,6 @@
       "platform": "linux-x86_64",
       "file": "whisper-{version}-linux-x64-cuda12.tar.gz",
       "priority": 30
-    },
-    {
-      "id": "rocm",
-      "platform": "linux-x86_64",
-      "file": "whisper-{version}-linux-x64-rocm-gfx110X.tar.gz",
-      "priority": 40
     }
   ],
   "tools": [

@@ -267,8 +267,10 @@ mod tests {
         }
     }
 
-    fn spec(task: Task, formats: Vec<Format>) -> JobSpec {
-        let root = std::env::temp_dir().join(format!("wd-run-{}", std::process::id()));
+    /// Each test gets its own directory: they run in parallel and sharing one
+    /// made the collision-renaming logic produce different file names.
+    fn spec(tag: &str, task: Task, formats: Vec<Format>) -> JobSpec {
+        let root = std::env::temp_dir().join(format!("wd-run-{tag}-{}", std::process::id()));
         std::fs::create_dir_all(&root).unwrap();
         JobSpec {
             source: root.join("reunion.mp3"),
@@ -289,7 +291,7 @@ mod tests {
 
     #[test]
     fn collects_expected_outputs() {
-        let job = spec(Task::Transcribe, vec![Format::Txt, Format::Srt]);
+        let job = spec("collects", Task::Transcribe, vec![Format::Txt, Format::Srt]);
         std::fs::create_dir_all(&job.output_dir).unwrap();
         let plan = job.output_plan("2026-11-01", "1930");
 
@@ -322,7 +324,7 @@ mod tests {
 
     #[test]
     fn both_produces_four_files() {
-        let job = spec(Task::Both, vec![Format::Txt, Format::Srt]);
+        let job = spec("both", Task::Both, vec![Format::Txt, Format::Srt]);
         std::fs::create_dir_all(&job.output_dir).unwrap();
         let plan = job.output_plan("2026-11-01", "1930");
 
@@ -352,7 +354,7 @@ mod tests {
 
     #[test]
     fn cancellation_propagates() {
-        let job = spec(Task::Transcribe, vec![Format::Txt]);
+        let job = spec("cancel", Task::Transcribe, vec![Format::Txt]);
         let plan = job.output_plan("2026-11-01", "1930");
         let runner = FakeRunner {
             backend_line: "using CPU backend",

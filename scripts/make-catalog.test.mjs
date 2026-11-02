@@ -54,7 +54,7 @@ test.after(() => {
 });
 
 test("hashes every artifact and builds release URLs", () => {
-  const catalog = buildCatalog({
+  const { catalog } = buildCatalog({
     artifactsDir: TMP,
     manifest,
     repo: "acme/whisper-desktop",
@@ -79,7 +79,7 @@ test("hashes every artifact and builds release URLs", () => {
 });
 
 test("produces a catalogue the app accepts", () => {
-  const catalog = buildCatalog({
+  const { catalog } = buildCatalog({
     artifactsDir: TMP,
     manifest,
     repo: "acme/whisper-desktop",
@@ -96,6 +96,28 @@ test("produces a catalogue the app accepts", () => {
       },
     ],
   });
+  assert.deepEqual(validateCatalog(catalog), []);
+});
+
+test("skips missing artifacts when allowed", () => {
+  const { catalog, skipped } = buildCatalog({
+    artifactsDir: TMP,
+    manifest: {
+      ...manifest,
+      backends: [
+        { id: "cuda", platform: "windows-x86_64", file: "no-existe.zip", priority: 30 },
+        { id: "vulkan", platform: "linux-x86_64", file: manifest.backends[0].file, priority: 20 },
+      ],
+      tools: [],
+    },
+    repo: "acme/whisper-desktop",
+    release: "backends-r1",
+    allowMissing: true,
+  });
+
+  assert.equal(catalog.backends.length, 1);
+  assert.equal(catalog.backends[0].id, "vulkan");
+  assert.deepEqual(skipped, ["no-existe.zip"]);
   assert.deepEqual(validateCatalog(catalog), []);
 });
 
@@ -119,7 +141,7 @@ test("fails loudly when an artifact is missing", () => {
 });
 
 test("rejects a catalogue with placeholder hashes", () => {
-  const catalog = buildCatalog({
+  const { catalog } = buildCatalog({
     artifactsDir: TMP,
     manifest,
     repo: "acme/whisper-desktop",
@@ -132,7 +154,7 @@ test("rejects a catalogue with placeholder hashes", () => {
 });
 
 test("rejects insecure URLs", () => {
-  const catalog = buildCatalog({
+  const { catalog } = buildCatalog({
     artifactsDir: TMP,
     manifest,
     repo: "acme/whisper-desktop",

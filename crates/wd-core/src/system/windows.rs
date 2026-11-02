@@ -32,18 +32,14 @@ fn run(script: &str, label: &str) -> IntegrationReport {
 
     match output {
         Ok(output) if output.status.success() => {
-            report.actions.push(format!("Integración {label}"));
+            report.done(format!("Integración {label}"));
         }
         Ok(output) => {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            report
-                .errors
-                .push(format!("PowerShell devolvió un error: {}", stderr.trim()));
+            report.fail(format!("PowerShell devolvió un error: {}", stderr.trim()));
         }
         Err(error) => {
-            report
-                .errors
-                .push(format!("no se pudo ejecutar PowerShell: {error}"));
+            report.fail(format!("no se pudo ejecutar PowerShell: {error}"));
         }
     }
 

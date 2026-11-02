@@ -45,32 +45,61 @@ export function hashArtifact(artifactsDir, file, baseUrl) {
  * @param {Array}  [options.models]       already hashed model entries
  * @param {string} [options.channel]
  */
-export function buildCatalog({ artifactsDir, manifest, repo, release, models = [], channel = "stable" }) {
+export function buildCatalog({
+  artifactsDir,
+  manifest,
+  repo,
+  release,
+  models = [],
+  channel = "stable",
+  // A release can legitimately miss a platform (Windows not built yet, ROCm
+  // still missing). Publishing the rest is better than publishing nothing: the
+  // app already adapts to what the catalogue offers.
+  allowMissing = false,
+}) {
   const baseUrl = `https://github.com/${repo}/releases/download/${release}`;
+  const skipped = [];
 
-  const backends = manifest.backends.map((entry) => ({
+  const collect = (entries, build) => {
+    const out = [];
+    for (const entry of entries ?? []) {
+      const file = entry.file.replace("{version}", manifest.version);
+      try {
+        out.push(build(entry, file));
+      } catch (error) {
+        if (!allowMissing) throw error;
+        skipped.push(file);
+      }
+    }
+    return out;
+  };
+
+  const backends = collect(manifest.backends, (entry, file) => ({
     id: entry.id,
     platform: entry.platform,
     priority: entry.priority ?? 10,
-    artifact: hashArtifact(artifactsDir, entry.file.replace("{version}", manifest.version), baseUrl),
+    artifact: hashArtifact(artifactsDir, file, baseUrl),
     env: entry.env ?? {},
   }));
 
-  const tools = (manifest.tools ?? []).map((entry) => ({
+  const tools = collect(manifest.tools, (entry, file) => ({
     id: entry.id,
     platform: entry.platform,
     version: entry.version ?? null,
-    artifact: hashArtifact(artifactsDir, entry.file.replace("{version}", manifest.version), baseUrl),
+    artifact: hashArtifact(artifactsDir, file, baseUrl),
   }));
 
   return {
-    schema: 1,
-    channel,
-    generated: new Date().toISOString(),
-    minAppVersion: manifest.minAppVersion ?? "0.1.0",
-    backends,
-    tools,
-    models,
+    catalog: {
+      schema: 1,
+      channel,
+      generated: new Date().toISOString(),
+      minAppVersion: manifest.minAppVersion ?? "0.1.0",
+      backends,
+      tools,
+      models,
+    },
+    skipped,
   };
 }
 
@@ -133,6 +162,7 @@ function parseArgs(argv) {
     release: process.env.GITHUB_REF_NAME ?? "backends-r1",
     out: "catalog.json",
     channel: "stable",
+    allowMissing: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
@@ -166,10 +196,14 @@ function parseArgs(argv) {
         options.channel = value;
         index += 1;
         break;
+      case "--allow-missing":
+        options.allowMissing = true;
+        break;
       case "--help":
         console.log(
           "uso: make-catalog.mjs [--artifacts dist] [--manifest scripts/backends.manifest.json] " +
-            "[--models models.json] [--repo owner/name] [--release tag] [--out catalog.json]",
+            "[--models models.json] [--repo owner/name] [--release tag] [--out catalog.json] " +
+            "[--allow-missing]",
         );
         process.exit(0);
         break;
@@ -187,7 +221,17 @@ function main() {
     ? JSON.parse(readFileSync(options.modelsPath, "utf8"))
     : [];
 
-  const catalog = buildCatalog({ ...options, manifest, models });
+  const { catalog, skipped } = buildCatalog({ ...options, manifest, models });
+
+  if (skipped.length > 0) {
+    console.warn(`aviso: ${skipped.length} artefacto(s) ausentes, se omiten:`);
+    for (const file of skipped) console.warn(`  - ${file}`);
+  }
+  if (catalog.backends.length === 0) {
+    console.error("el catálogo se quedaría sin ningún backend");
+    process.exit(1);
+  }
+
   const errors = validateCatalog(catalog);
 
   if (errors.length > 0) {

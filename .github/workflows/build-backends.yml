@@ -17,6 +17,10 @@ on:
         default: "stable"
         type: choice
         options: [stable, beta]
+      release_tag:
+        description: "Tag del release de backends"
+        required: true
+        default: "backends-r1"
   push:
     tags:
       - "backends-*"
@@ -26,6 +30,9 @@ permissions:
 
 env:
   WHISPER_VERSION: ${{ github.event.inputs.whisper_version || '1.8.4' }}
+  # On workflow_dispatch github.ref_name is the branch ("main"), which would
+  # create a release called "main".
+  RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
   WHISPER_REPO: https://github.com/ggml-org/whisper.cpp
   # Pinned on purpose: "latest" makes releases unreproducible.
   FFMPEG_TAG: autobuild-2026-10-31-12-00
@@ -168,7 +175,9 @@ jobs:
             --artifacts release \
             --manifest scripts/backends.manifest.json \
             --repo "$GITHUB_REPOSITORY" \
-            --release "$GITHUB_REF_NAME" \
+            --release "$RELEASE_TAG" \
+            --models scripts/models.json \
+            --allow-missing \
             --channel "${{ github.event.inputs.channel || 'stable' }}" \
             --out release/catalog.json
 
@@ -190,9 +199,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete "$GITHUB_REF_NAME" --yes 2>/dev/null || true
-          gh release create "$GITHUB_REF_NAME" release/* release/catalog.json.sig \
-            --title "Backends $GITHUB_REF_NAME" \
+          gh release delete "$RELEASE_TAG" --yes 2>/dev/null || true
+          gh release create "$RELEASE_TAG" release/* release/catalog.json.sig \
+            --title "Backends $RELEASE_TAG" \
             --notes "whisper.cpp ${WHISPER_VERSION} · ffmpeg ${FFMPEG_TAG} · canal ${{ github.event.inputs.channel || 'stable' }}"
 
       # The app reads this URL first; keep it in sync with the release.
@@ -204,5 +213,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/catalog.json docs/catalog.json.sig
-          git diff --cached --quiet || git commit -m "chore: catálogo firmado desde $GITHUB_REF_NAME"
+          git diff --cached --quiet || git commit -m "chore: catálogo firmado desde $RELEASE_TAG"
           git push
