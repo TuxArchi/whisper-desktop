@@ -34,8 +34,9 @@ env:
   # create a release called "main".
   RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
   WHISPER_REPO: https://github.com/ggml-org/whisper.cpp
-  # Pinned on purpose: "latest" makes releases unreproducible.
-  FFMPEG_TAG: autobuild-2026-10-31-12-00
+  # BtbN rotates and deletes autobuild tags, so a pinned one eventually 404s.
+  # The version is recorded in the release notes.
+  FFMPEG_TAG: latest
 
 jobs:
   linux:
@@ -51,7 +52,17 @@ jobs:
       - name: Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake build-essential libvulkan-dev glslc
+          sudo apt-get install -y cmake build-essential libvulkan-dev
+
+      # Ubuntu 22.04 has no glslc package; the SDK provides it.
+      - name: Vulkan SDK
+        if: matrix.backend == 'vulkan'
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: 1.3.290
+          install_runtime: false
+          cache: true
+          stripdown: true
 
       - name: Fetch whisper.cpp
         run: |
@@ -86,7 +97,10 @@ jobs:
 
       - name: Build
         working-directory: whisper.cpp
-        run: bash ../scripts/build-backend.sh cuda "$WHISPER_VERSION" ../release
+        run: |
+          # The devel image has the driver stub but does not link against it.
+          export LIBRARY_PATH="/usr/local/cuda/lib64/stubs:${LIBRARY_PATH:-}"
+          bash ../scripts/build-backend.sh cuda "$WHISPER_VERSION" ../release
 
       - uses: actions/upload-artifact@v4
         with:
@@ -96,6 +110,9 @@ jobs:
 
   windows:
     name: windows-${{ matrix.backend }}
+    # Windows is deferred: these jobs have never run and would only slow the
+    # Linux pipeline. Re-enable when the Windows port is tested.
+    if: false
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -106,9 +123,12 @@ jobs:
 
       - name: Vulkan SDK
         if: matrix.backend == 'vulkan'
-        uses: jurplel/install-vulkan-sdk@v1.2.0
+        uses: jakoch/install-vulkan-sdk-action@v1
         with:
-          version: 1.4.304.0
+          vulkan_version: 1.3.290
+          install_runtime: false
+          cache: true
+          stripdown: true
 
       - name: Fetch whisper.cpp
         run: git clone --depth 1 --branch "v$env:WHISPER_VERSION" "$env:WHISPER_REPO" whisper.cpp
@@ -138,14 +158,14 @@ jobs:
           base="https://github.com/BtbN/FFmpeg-Builds/releases/download/${FFMPEG_TAG}"
           mkdir -p release work
 
-          curl -fL "$base/ffmpeg-n7.1-latest-win64-lgpl.zip" -o work/win.zip
+          curl -fL "$base/ffmpeg-master-latest-win64-lgpl.zip" -o work/win.zip
           unzip -q work/win.zip -d work/win
           mkdir -p work/stage-win/bin
           find work/win -name ffmpeg.exe -exec cp {} work/stage-win/bin/ffmpeg.exe \;
           (cd work/stage-win && zip -qr ../../release/ffmpeg-lgpl-win64.zip .)
           cp work/win/LICENSE.txt release/LICENSE.ffmpeg.txt 2>/dev/null || true
 
-          curl -fL "$base/ffmpeg-n7.1-latest-linux64-lgpl.tar.xz" -o work/linux.tar.xz
+          curl -fL "$base/ffmpeg-master-latest-linux64-lgpl.tar.xz" -o work/linux.tar.xz
           tar -xJf work/linux.tar.xz -C work --one-top-level=linux
           mkdir -p work/stage-linux/bin
           find work/linux -name ffmpeg -type f -exec cp {} work/stage-linux/bin/ffmpeg \;
