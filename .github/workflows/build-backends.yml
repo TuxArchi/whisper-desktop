@@ -227,7 +227,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete "$RELEASE_TAG" --yes 2>/dev/null || true
-          gh release create "$RELEASE_TAG" release/* release/catalog.json.sig \
+          gh release create "$RELEASE_TAG" release/* \
             --title "Backends $RELEASE_TAG" \
             --notes "whisper.cpp ${WHISPER_VERSION} · ffmpeg ${FFMPEG_TAG} · canal ${{ github.event.inputs.channel || 'stable' }}"
 
