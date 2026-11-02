@@ -1,35 +1,49 @@
 //! Hardware detection for Windows.
 //!
-//! Uses PowerShell + CIM (present on every supported Windows) plus
-//! `nvidia-smi` when available. No admin rights, no WMI COM bindings.
+//! Everything comes from a **single** PowerShell invocation that returns one
+//! JSON object: spawning PowerShell six times made the user see six console
+//! windows flash. `nvidia-smi` is a second, also hidden, call.
 
 use std::process::Command;
 
 use super::pci;
 use crate::hardware::*;
+use crate::process::hidden;
 use serde_json::Value;
 
 pub fn detect() -> HardwareReport {
     let mut warnings = Vec::new();
 
-    let os = os_info();
-    let cpu = cpu_info();
+    let snapshot = snapshot();
+    let os = os_info(&snapshot);
+    let cpu = cpu_info(&snapshot);
     if !cpu.flags.avx2 {
         warnings.push(Reason::new("warn.no_avx2"));
     }
 
-    let ram_mb = ram_total_mb();
-    let vram_map = vram_by_name();
-    let mut gpus = gpu_info(&vram_map);
+    let ram_mb = ram_total_mb(&snapshot);
+    let vram_map = vram_by_name(&snapshot);
+    let mut gpus = gpu_info(&snapshot, &vram_map);
     let nvidia = nvidia_info();
 
+    // nvidia-smi reports the real total. The registry and, above all,
+    // AdapterRAM are not reliable enough to override it.
     if let Some(nv) = &nvidia {
+        let reported = nv.vram_mb;
+        let name_hint = nv.name.clone();
         for gpu in gpus.iter_mut().filter(|g| g.vendor == GpuVendor::Nvidia) {
-            if gpu.vram_mb.is_none() {
-                gpu.vram_mb = nv.vram_mb;
-            }
-            if gpu.driver.is_none() {
-                gpu.driver = nv.driver_version.clone();
+            let matches = match (&name_hint, &gpu.name) {
+                (Some(a), Some(b)) => names_match(a, b),
+                _ => true,
+            };
+            if matches || gpus.len() == 1 {
+                if let Some(vram) = reported {
+                    gpu.vram_mb = Some(vram);
+                    gpu.vram_source = Some("nvidia-smi".to_string());
+                }
+                if gpu.driver.is_none() {
+                    gpu.driver = nv.driver_version.clone();
+                }
             }
         }
     }
@@ -54,7 +68,7 @@ pub fn detect() -> HardwareReport {
         os,
         cpu,
         ram_mb,
-        disks: disks(),
+        disks: disks(&snapshot),
         gpus,
         vulkan,
         nvidia,
@@ -63,37 +77,86 @@ pub fn detect() -> HardwareReport {
     }
 }
 
-/// Runs a PowerShell snippet and returns trimmed stdout.
-fn ps(script: &str) -> Option<String> {
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", script])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
+/// One PowerShell process, one JSON object with everything we need.
+fn snapshot() -> Value {
+    let script = r#"
+$ErrorActionPreference = 'SilentlyContinue'
+$os   = Get-CimInstance Win32_OperatingSystem
+$cpu  = Get-CimInstance Win32_Processor | Select-Object -First 1
+$cs   = Get-CimInstance Win32_ComputerSystem
+$disks = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,FreeSpace,Size)
+$gpus  = @(Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,PNPDeviceID,AdapterRAM)
+$cls = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
+$vram = @()
+Get-ChildItem $cls | ForEach-Object {
+  $p = Get-ItemProperty $_.PSPath
+  if ($p.DriverDesc -and $p.'HardwareInformation.qwMemorySize') {
+    $vram += [pscustomobject]@{ name = $p.DriverDesc; bytes = $p.'HardwareInformation.qwMemorySize' }
+  }
+}
+[pscustomobject]@{
+  os    = [pscustomobject]@{ caption = $os.Caption; version = $os.Version }
+  cpu   = [pscustomobject]@{ name = $cpu.Name; cores = $cpu.NumberOfCores; logical = $cpu.NumberOfLogicalProcessors }
+  ram   = $cs.TotalPhysicalMemory
+  disks = $disks
+  gpus  = $gpus
+  vram  = $vram
+} | ConvertTo-Json -Compress -Depth 6
+"#;
+
+    let output = hidden(Command::new("powershell").args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        script,
+    ]))
+    .output();
+
+    match output {
+        Ok(output) if output.status.success() => {
+            let text = String::from_utf8_lossy(&output.stdout);
+            let text = text.trim();
+            serde_json::from_str(text).unwrap_or(Value::Null)
+        }
+        _ => Value::Null,
     }
-    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-fn ps_json(script: &str) -> Option<Value> {
-    let raw = ps(&format!("{script} | ConvertTo-Json -Compress -Depth 4"))?;
-    if raw.is_empty() {
-        return None;
-    }
-    serde_json::from_str(&raw).ok()
-}
-
-fn as_array(value: Value) -> Vec<Value> {
+fn as_array(value: Option<&Value>) -> Vec<&Value> {
     match value {
-        Value::Array(items) => items,
-        Value::Null => Vec::new(),
-        other => vec![other],
+        Some(Value::Array(items)) => items.iter().collect(),
+        // PowerShell collapses single-element arrays into a plain object.
+        Some(Value::Object(_)) => vec![value.unwrap()],
+        _ => Vec::new(),
     }
 }
 
-fn os_info() -> OsInfo {
-    let version = ps("(Get-CimInstance Win32_OperatingSystem).Caption + ' ' + (Get-CimInstance Win32_OperatingSystem).Version")
-        .filter(|s| !s.is_empty());
+fn number(value: Option<&Value>) -> Option<u64> {
+    match value? {
+        Value::Number(number) => number.as_u64(),
+        // ConvertTo-Json can serialise a REG_QWORD as a string.
+        Value::String(text) => text.trim().parse().ok(),
+        _ => None,
+    }
+}
+
+fn os_info(snapshot: &Value) -> OsInfo {
+    let caption = snapshot
+        .pointer("/os/caption")
+        .and_then(Value::as_str)
+        .unwrap_or("Windows");
+    let version = snapshot
+        .pointer("/os/version")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let version = if version.is_empty() {
+        Some(caption.to_string())
+    } else {
+        Some(format!("{caption} {version}"))
+    };
+
     OsInfo {
         family: "windows".to_string(),
         version,
@@ -102,36 +165,17 @@ fn os_info() -> OsInfo {
     }
 }
 
-fn cpu_info() -> CpuInfo {
-    let mut cores = 0u32;
-    let mut logical = 0u32;
-    let mut model = None;
-
-    if let Some(json) = ps_json(
-        "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors",
-    ) {
-        if let Some(first) = as_array(json).into_iter().next() {
-            model = first
-                .get("Name")
-                .and_then(Value::as_str)
-                .map(|s| s.trim().to_string());
-            cores = first
-                .get("NumberOfCores")
-                .and_then(Value::as_u64)
-                .unwrap_or(0) as u32;
-            logical = first
-                .get("NumberOfLogicalProcessors")
-                .and_then(Value::as_u64)
-                .unwrap_or(0) as u32;
-        }
-    }
-
+fn cpu_info(snapshot: &Value) -> CpuInfo {
+    let cpu = snapshot.get("cpu");
     CpuInfo {
-        model,
-        physical_cores: cores,
-        logical_cores: logical,
-        // AVX2 ships with every CPU that can run Windows 11; we do not probe
-        // per-core instruction sets on Windows to keep the detector fast.
+        model: cpu
+            .and_then(|value| value.get("name"))
+            .and_then(Value::as_str)
+            .map(|name| name.trim().to_string()),
+        physical_cores: number(cpu.and_then(|value| value.get("cores"))).unwrap_or(0) as u32,
+        logical_cores: number(cpu.and_then(|value| value.get("logical"))).unwrap_or(0) as u32,
+        // AVX2 ships with every CPU that can run Windows 11; probing per-core
+        // instruction sets would need another process.
         flags: CpuFlags {
             avx2: true,
             avx512f: false,
@@ -141,74 +185,57 @@ fn cpu_info() -> CpuInfo {
     }
 }
 
-fn ram_total_mb() -> u64 {
-    ps("(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory")
-        .and_then(|s| s.parse::<u64>().ok())
+fn ram_total_mb(snapshot: &Value) -> u64 {
+    number(snapshot.get("ram"))
         .map(|bytes| bytes / 1_048_576)
         .unwrap_or(0)
 }
 
-fn disks() -> Vec<DiskInfo> {
-    let mut out = Vec::new();
-    if let Some(json) = ps_json(
-        "Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID,FreeSpace,Size",
-    ) {
-        for disk in as_array(json) {
-            let mount = disk
-                .get("DeviceID")
-                .and_then(Value::as_str)
-                .unwrap_or("/")
-                .to_string();
-            let free = disk.get("FreeSpace").and_then(Value::as_u64).unwrap_or(0);
-            let total = disk.get("Size").and_then(Value::as_u64).unwrap_or(0);
-            out.push(DiskInfo {
-                mount,
-                free_mb: free / 1_048_576,
-                total_mb: total / 1_048_576,
-            });
-        }
-    }
-    out
+fn disks(snapshot: &Value) -> Vec<DiskInfo> {
+    as_array(snapshot.get("disks"))
+        .into_iter()
+        .filter_map(|disk| {
+            Some(DiskInfo {
+                mount: disk.get("DeviceID")?.as_str()?.to_string(),
+                free_mb: number(disk.get("FreeSpace")).unwrap_or(0) / 1_048_576,
+                total_mb: number(disk.get("Size")).unwrap_or(0) / 1_048_576,
+            })
+        })
+        .collect()
 }
 
-/// `AdapterRAM` is a uint32 and saturates around 4 GB. The real value lives in
-/// the display class registry key as `HardwareInformation.qwMemorySize`.
-fn vram_by_name() -> Vec<(String, u64)> {
-    let script = r#"
-$cls = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}'
-Get-ChildItem $cls -ErrorAction SilentlyContinue | ForEach-Object {
-  $p = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
-  if ($p.DriverDesc -and $p.'HardwareInformation.qwMemorySize') {
-    [pscustomobject]@{ Name = $p.DriverDesc; Vram = $p.'HardwareInformation.qwMemorySize' }
-  }
-}
-"#;
-    let mut out = Vec::new();
-    if let Some(json) = ps_json(script) {
-        for item in as_array(json) {
-            let name = item
-                .get("Name")
-                .and_then(Value::as_str)
-                .unwrap_or("")
-                .to_string();
-            let vram = item.get("Vram").and_then(Value::as_u64).unwrap_or(0);
-            if !name.is_empty() && vram > 0 {
-                out.push((name, vram / 1_048_576));
+fn vram_by_name(snapshot: &Value) -> Vec<(String, u64)> {
+    as_array(snapshot.get("vram"))
+        .into_iter()
+        .filter_map(|entry| {
+            let name = entry.get("name")?.as_str()?.to_string();
+            let bytes = number(entry.get("bytes"))?;
+            if name.is_empty() || bytes == 0 {
+                return None;
             }
-        }
-    }
-    out
+            Some((name, bytes / 1_048_576))
+        })
+        .collect()
 }
 
-fn gpu_info(vram_map: &[(String, u64)]) -> Vec<GpuInfo> {
-    let mut out = Vec::new();
-    let Some(json) = ps_json(
-        "Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,PNPDeviceID,AdapterRAM",
-    ) else {
-        return out;
-    };
+/// `AdapterRAM` is a uint32: it cannot report more than ~4 GB and saturates at
+/// exactly that value. Treating 4095–4097 MB as a real figure is what made an
+/// RTX 3070 of 8 GB appear as 4 GB.
+fn adapter_ram_mb(bytes: u64) -> Option<u64> {
+    let mb = bytes / 1_048_576;
+    if (4095..=4097).contains(&mb) {
+        None
+    } else if mb > 0 {
+        Some(mb)
+    } else {
+        None
+    }
+}
 
-    for item in as_array(json) {
+fn gpu_info(snapshot: &Value, vram_map: &[(String, u64)]) -> Vec<GpuInfo> {
+    let mut out = Vec::new();
+
+    for item in as_array(snapshot.get("gpus")) {
         let name = item
             .get("Name")
             .and_then(Value::as_str)
@@ -227,22 +254,20 @@ fn gpu_info(vram_map: &[(String, u64)]) -> Vec<GpuInfo> {
         let driver = item
             .get("DriverVersion")
             .and_then(Value::as_str)
-            .map(|s| s.to_string());
-
+            .map(|value| value.to_string());
         let pci_id = pci_id_from_pnp(pnp);
 
-        let mut vram_mb = vram_map
+        let (vram_mb, vram_source) = if let Some(mb) = vram_map
             .iter()
-            .find(|(n, _)| names_match(n, &name))
-            .map(|(_, v)| *v);
-
-        if vram_mb.is_none() {
-            let adapter_ram = item.get("AdapterRAM").and_then(Value::as_u64).unwrap_or(0);
-            if adapter_ram > 0 {
-                // Anything at/above 4 GB is the uint32 saturation artifact.
-                vram_mb = Some(adapter_ram / 1_048_576);
-            }
-        }
+            .find(|(candidate, _)| names_match(candidate, &name))
+            .map(|(_, mb)| *mb)
+        {
+            (Some(mb), Some("registry".to_string()))
+        } else if let Some(mb) = number(item.get("AdapterRAM")).and_then(adapter_ram_mb) {
+            (Some(mb), Some("adapterram".to_string()))
+        } else {
+            (None, None)
+        };
 
         let family = pci::family_from_name(vendor, &name);
         let confidence = if vram_mb.is_some() && !name.is_empty() {
@@ -256,12 +281,14 @@ fn gpu_info(vram_map: &[(String, u64)]) -> Vec<GpuInfo> {
             name: if name.is_empty() { None } else { Some(name) },
             pci_id,
             vram_mb,
+            vram_source,
             driver,
             gfx_arch: None,
             family,
             confidence,
         });
     }
+
     out
 }
 
@@ -298,25 +325,59 @@ fn pci_id_from_pnp(pnp: &str) -> Option<String> {
 }
 
 fn nvidia_info() -> Option<NvidiaInfo> {
-    let output = Command::new("nvidia-smi")
-        .args([
-            "--query-gpu=name,memory.total,driver_version,compute_cap",
-            "--format=csv,noheader,nounits",
-        ])
-        .output()
-        .ok()?;
+    let output = hidden(Command::new("nvidia-smi").args([
+        "--query-gpu=name,memory.total,driver_version,compute_cap",
+        "--format=csv,noheader,nounits",
+    ]))
+    .output()
+    .ok()?;
+
     if !output.status.success() {
         return None;
     }
+
     let text = String::from_utf8_lossy(&output.stdout);
     let first = text.lines().next()?;
-    let cols: Vec<&str> = first.split(',').map(|c| c.trim()).collect();
+    let cols: Vec<&str> = first.split(',').map(|column| column.trim()).collect();
     if cols.len() < 3 {
         return None;
     }
+
     Some(NvidiaInfo {
+        name: cols.first().map(|value| value.to_string()),
         driver_version: Some(cols[2].to_string()),
-        compute_cap: cols.get(3).map(|s| s.to_string()),
+        compute_cap: cols.get(3).map(|value| value.to_string()),
         vram_mb: cols[1].parse::<u64>().ok(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn saturated_adapter_ram_is_ignored() {
+        // 0xFFFFFFFF bytes is what a 4 GB+ card reports.
+        assert_eq!(adapter_ram_mb(u64::from(u32::MAX)), None);
+        assert_eq!(adapter_ram_mb(4_294_967_296), None);
+    }
+
+    #[test]
+    fn real_adapter_ram_is_kept() {
+        assert_eq!(adapter_ram_mb(2 * 1024 * 1024 * 1024), Some(2048));
+        assert_eq!(adapter_ram_mb(0), None);
+    }
+
+    #[test]
+    fn registry_value_can_be_a_string() {
+        let value: Value = serde_json::json!("8589934592");
+        assert_eq!(number(Some(&value)), Some(8_589_934_592));
+    }
+
+    #[test]
+    fn single_element_arrays_are_normalised() {
+        let value: Value = serde_json::json!({ "Name": "x" });
+        assert_eq!(as_array(Some(&value)).len(), 1);
+        assert_eq!(as_array(None).len(), 0);
+    }
 }

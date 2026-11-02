@@ -7,6 +7,7 @@
 use std::process::Command;
 
 use super::{scripts, IntegrationOptions, IntegrationReport};
+use crate::process::hidden;
 
 pub fn integrate(options: &IntegrationOptions) -> IntegrationReport {
     run(&scripts::windows_integrate_script(options), "integrada")
@@ -19,16 +20,16 @@ pub fn unintegrate(options: &IntegrationOptions) -> IntegrationReport {
 fn run(script: &str, label: &str) -> IntegrationReport {
     let mut report = IntegrationReport::default();
 
-    let output = Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            script,
-        ])
-        .output();
+    let mut command = Command::new("powershell");
+    command.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        script,
+    ]);
+    let output = hidden(&mut command).output();
 
     match output {
         Ok(output) if output.status.success() => {

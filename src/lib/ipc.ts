@@ -80,10 +80,18 @@ async function demo<T>(command: string): Promise<T> {
       return demoPlan as unknown as T;
     case "catalog_status":
       return {
-        ok: false,
+        ok: true,
         backends: 6,
-        models: 4,
-        errors: ["artifact con sha256 inválido (catálogo de desarrollo)"],
+        recommended: "large-v3-turbo",
+        models: [
+          { id: "base", size: 147951465, vramMb: 640 },
+          { id: "small", size: 487601967, vramMb: 1024 },
+          { id: "medium", size: 1533763059, vramMb: 2560 },
+          { id: "large-v3-turbo", size: 1624555275, vramMb: 3072 },
+          { id: "large-v3", size: 3095033483, vramMb: 5120 },
+        ],
+        errors: [],
+        notes: [],
       } as unknown as T;
     case "start_install":
       throw new Error(

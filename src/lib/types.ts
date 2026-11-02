@@ -91,10 +91,18 @@ export interface AppState {
   zipPreview: boolean;
 }
 
+export interface ModelChoice {
+  id: string;
+  size: number;
+  vramMb: number;
+}
+
 export interface CatalogStatus {
   ok: boolean;
   backends: number;
-  models: number;
+  models: ModelChoice[];
+  /** Model the hardware suggests. */
+  recommended: string;
   errors: string[];
   notes: Reason[];
 }

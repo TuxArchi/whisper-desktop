@@ -38,6 +38,7 @@ export default function Wizard({
   const [report, setReport] = useState<HardwareReport | null>(null);
   const [plan, setPlan] = useState<InstallPlan | null>(null);
   const [catalog, setCatalog] = useState<CatalogStatus | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<Record<string, StepProgress>>({});
   const [currentStep, setCurrentStep] = useState<string>("");
@@ -52,7 +53,10 @@ export default function Wizard({
   useEffect(() => {
     if (step !== "recommend") return;
     ipc<CatalogStatus>("catalog_status")
-      .then(setCatalog)
+      .then((value) => {
+        setCatalog(value);
+        setSelectedModel((current) => current || value.recommended);
+      })
       .catch(() => setCatalog(null));
   }, [step]);
 
@@ -70,6 +74,23 @@ export default function Wizard({
       setStep("welcome");
     }
   }, []);
+
+  const gpuVram = useCallback(() => {
+    const vram = (report?.gpus ?? [])
+      .map((gpu) => gpu.vramMb ?? 0)
+      .reduce((max, value) => Math.max(max, value), 0);
+    return vram;
+  }, [report]);
+
+  const selectedVram = useCallback(() => {
+    const model = catalog?.models.find((item) => item.id === selectedModel);
+    return model?.vramMb ?? 0;
+  }, [catalog, selectedModel]);
+
+  const modelOverBudget = useCallback(() => {
+    const vram = gpuVram();
+    return vram > 0 && selectedVram() > vram;
+  }, [gpuVram, selectedVram]);
 
   const startInstall = useCallback(async () => {
     setStep("installing");
@@ -101,7 +122,7 @@ export default function Wizard({
     }
 
     try {
-      await ipc("start_install");
+      await ipc("start_install", { model: selectedModel || null });
 
       // Shortcuts, PATH and "Open with". Best effort: a failure here must not
       // invalidate an otherwise correct installation.
@@ -217,7 +238,7 @@ export default function Wizard({
               <div>
                 <span className="label">Modelo</span>
                 <strong>
-                  {plan.model} · {plan.variant}
+                  {selectedModel || plan.model} · {plan.variant}
                 </strong>
               </div>
               <div>
@@ -237,6 +258,40 @@ export default function Wizard({
                 Si la GPU no responde, se probará:{" "}
                 {plan.fallbacks.map((b) => BACKEND_LABEL[b] ?? b).join(" → ")}
               </p>
+            )}
+
+            {catalog && catalog.models.length > 0 && (
+              <div className="models">
+                <span className="label">Modelo a descargar</span>
+                <div className="model-list">
+                  {catalog.models.map((model) => {
+                    const active = (selectedModel || plan.model) === model.id;
+                    return (
+                      <label key={model.id} className={active ? "model active" : "model"}>
+                        <input
+                          type="radio"
+                          name="model"
+                          checked={active}
+                          onChange={() => setSelectedModel(model.id)}
+                        />
+                        <span className="model-name">{model.id}</span>
+                        {model.id === catalog.recommended && (
+                          <span className="badge">recomendado</span>
+                        )}
+                        <span className="model-size">
+                          {formatBytes(model.size)} · ~{model.vramMb} MB VRAM
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {modelOverBudget() && (
+                  <p className="warn-line">
+                    Ese modelo pide ~{selectedVram()} MB de VRAM y tienes {gpuVram()} MB. Puede
+                    que termine usando la CPU, que es mucho más lento.
+                  </p>
+                )}
+              </div>
             )}
           </section>
 

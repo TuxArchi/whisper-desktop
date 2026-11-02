@@ -21,6 +21,7 @@ pub mod job;
 pub mod manifest;
 pub mod output;
 pub mod paths;
+pub mod process;
 pub mod relocate;
 pub mod system;
 pub mod transcriber;

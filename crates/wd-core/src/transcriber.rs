@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::job::{parse_progress, JobSpec, WhisperCommand};
 use crate::output::{Format, OutputPlan};
+use crate::process::hidden;
 use crate::verify::parse_backend;
 
 #[derive(Debug, thiserror::Error)]
@@ -46,11 +47,14 @@ impl ProcessRunner for SystemRunner {
         on_progress: &mut dyn FnMut(u8),
         cancel: &AtomicBool,
     ) -> Result<RunOutcome, TranscribeError> {
-        let mut child = Command::new(&command.program)
+        let mut process = Command::new(&command.program);
+        process
             .args(&command.args)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        let mut child = hidden(&mut process)
             .spawn()
             .map_err(|error| TranscribeError::Spawn {
                 program: command.program.to_string_lossy().to_string(),
@@ -118,28 +122,31 @@ pub fn normalize_audio(ffmpeg: &Path, source: &Path, dest: &Path) -> Result<(), 
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let status = Command::new(ffmpeg)
-        .arg("-hide_banner")
-        .arg("-loglevel")
-        .arg("error")
-        .arg("-y")
-        .arg("-i")
-        .arg(source)
-        .arg("-ar")
-        .arg("16000")
-        .arg("-ac")
-        .arg("1")
-        .arg("-c:a")
-        .arg("pcm_s16le")
-        .arg(dest)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map_err(|error| TranscribeError::Spawn {
-            program: ffmpeg.to_string_lossy().to_string(),
-            detail: error.to_string(),
-        })?;
+    let mut process = Command::new(ffmpeg);
+    let status = hidden(
+        process
+            .arg("-hide_banner")
+            .arg("-loglevel")
+            .arg("error")
+            .arg("-y")
+            .arg("-i")
+            .arg(source)
+            .arg("-ar")
+            .arg("16000")
+            .arg("-ac")
+            .arg("1")
+            .arg("-c:a")
+            .arg("pcm_s16le")
+            .arg(dest)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null()),
+    )
+    .status()
+    .map_err(|error| TranscribeError::Spawn {
+        program: ffmpeg.to_string_lossy().to_string(),
+        detail: error.to_string(),
+    })?;
 
     if status.success() {
         Ok(())

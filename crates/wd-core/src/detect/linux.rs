@@ -33,6 +33,7 @@ pub fn detect() -> HardwareReport {
         for gpu in gpus.iter_mut().filter(|g| g.vendor == GpuVendor::Nvidia) {
             if gpu.vram_mb.is_none() {
                 gpu.vram_mb = nv.vram_mb;
+                gpu.vram_source = nv.vram_mb.map(|_| "nvidia-smi".to_string());
             }
             if gpu.driver.is_none() {
                 gpu.driver = nv.driver_version.clone();
@@ -43,6 +44,7 @@ pub fn detect() -> HardwareReport {
                 vendor: GpuVendor::Nvidia,
                 name: Some("NVIDIA GPU".to_string()),
                 vram_mb: nv.vram_mb,
+                vram_source: nv.vram_mb.map(|_| "nvidia-smi".to_string()),
                 driver: nv.driver_version.clone(),
                 family: ArchFamily::Unknown,
                 confidence: Confidence::Low,
@@ -276,6 +278,7 @@ fn gpu_info() -> Vec<GpuInfo> {
             name,
             pci_id,
             vram_mb,
+            vram_source: vram_mb.map(|_| "sysfs".to_string()),
             driver,
             gfx_arch: None,
             family,
@@ -311,6 +314,7 @@ fn nvidia_info() -> Option<NvidiaInfo> {
         return None;
     }
     Some(NvidiaInfo {
+        name: cols.first().map(|value| value.to_string()),
         driver_version: Some(cols[2].to_string()),
         compute_cap: cols.get(3).map(|s| s.to_string()),
         vram_mb: cols[1].parse::<u64>().ok(),

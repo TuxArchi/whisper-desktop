@@ -14,6 +14,7 @@ use std::time::Instant;
 
 use crate::decide::{BackendId, InstallPlan};
 use crate::paths::AppPaths;
+use crate::process::hidden;
 use crate::verify::{parse_backend, realtime_factor, VerifyReport};
 
 /// Audio used for the benchmark. Long enough for whisper to engage the
@@ -63,7 +64,7 @@ impl CliRunner for SystemRunner {
         // Never inherit stdin: a CLI waiting for input would hang the wizard.
         process.stdin(std::process::Stdio::null());
 
-        let output = process
+        let output = hidden(&mut process)
             .output()
             .map_err(|error| BenchError::Spawn(error.to_string()))?;
 

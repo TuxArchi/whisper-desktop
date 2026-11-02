@@ -232,6 +232,11 @@ pub struct GpuInfo {
     pub pci_id: Option<String>,
     #[serde(default)]
     pub vram_mb: Option<u64>,
+    /// Where the VRAM figure came from: `nvidia-smi`, `registry`, `adapterram`
+    /// (Windows) or `sysfs` (Linux). AdapterRAM saturates at 4 GB, so knowing
+    /// the source matters when debugging a wrong recommendation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vram_source: Option<String>,
     #[serde(default)]
     pub driver: Option<String>,
     /// Exact target when available (from `rocminfo`), e.g. `gfx1031`.
@@ -269,6 +274,8 @@ pub struct VulkanInfo {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NvidiaInfo {
+    #[serde(default)]
+    pub name: Option<String>,
     #[serde(default)]
     pub driver_version: Option<String>,
     #[serde(default)]

@@ -38,10 +38,21 @@ struct AppStateView {
 struct CatalogStatus {
     ok: bool,
     backends: usize,
-    models: usize,
+    /// Every model the catalogue publishes, so the user can choose.
+    models: Vec<ModelChoice>,
+    /// Model the hardware suggests.
+    recommended: String,
     errors: Vec<String>,
     /// Differences between what the hardware suggests and what is published.
     notes: Vec<wd_core::Reason>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelChoice {
+    id: String,
+    size: u64,
+    vram_mb: u32,
 }
 
 #[derive(Debug, Serialize)]
@@ -121,7 +132,8 @@ async fn catalog_status() -> CatalogStatus {
         .unwrap_or_else(|error| CatalogStatus {
             ok: false,
             backends: 0,
-            models: 0,
+            models: Vec::new(),
+            recommended: String::new(),
             errors: vec![error.to_string()],
             notes: Vec::new(),
         })
@@ -136,10 +148,23 @@ fn catalog_status_blocking() -> CatalogStatus {
                 &catalog,
                 Platform::current(),
             );
+
+            let mut models: Vec<ModelChoice> = catalog
+                .models
+                .iter()
+                .map(|model| ModelChoice {
+                    id: model.id.clone(),
+                    size: model.size,
+                    vram_mb: model.vram_mb,
+                })
+                .collect();
+            models.sort_by_key(|model| model.size);
+
             CatalogStatus {
                 ok: errors.is_empty(),
                 backends: catalog.backends.len(),
-                models: catalog.models.len(),
+                models,
+                recommended: fit.plan.model.clone(),
                 errors,
                 notes: fit.notes,
             }
@@ -147,7 +172,8 @@ fn catalog_status_blocking() -> CatalogStatus {
         Err(error) => CatalogStatus {
             ok: false,
             backends: 0,
-            models: 0,
+            models: Vec::new(),
+            recommended: String::new(),
             errors: vec![error],
             notes: Vec::new(),
         },
@@ -155,13 +181,19 @@ fn catalog_status_blocking() -> CatalogStatus {
 }
 
 #[tauri::command]
-async fn start_install(app: tauri::AppHandle) -> Result<Manifest, String> {
-    tauri::async_runtime::spawn_blocking(move || install_blocking(&app))
+async fn start_install(
+    app: tauri::AppHandle,
+    model: Option<String>,
+) -> Result<Manifest, String> {
+    tauri::async_runtime::spawn_blocking(move || install_blocking(&app, model))
         .await
         .map_err(|error| error.to_string())?
 }
 
-fn install_blocking(app: &tauri::AppHandle) -> Result<Manifest, String> {
+fn install_blocking(
+    app: &tauri::AppHandle,
+    model: Option<String>,
+) -> Result<Manifest, String> {
     let app_paths = resolved_paths();
     let catalog = load_catalog()?;
 
@@ -180,7 +212,14 @@ fn install_blocking(app: &tauri::AppHandle) -> Result<Manifest, String> {
         &catalog,
         Platform::current(),
     );
-    let plan = fit.plan;
+    let mut plan = fit.plan;
+
+    // The user may prefer a different published model than the recommended one.
+    if let Some(chosen) = model {
+        if catalog.model(&chosen).is_some() {
+            plan.model = chosen;
+        }
+    }
 
     let request = InstallRequest {
         plan: &plan,
