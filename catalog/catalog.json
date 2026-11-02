@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "channel": "stable",
-  "generated": "2026-11-02T02:33:38.733Z",
+  "generated": "2026-11-02T05:38:06.099Z",
   "minAppVersion": "0.1.0",
   "backends": [
     {
@@ -9,9 +9,9 @@
       "platform": "linux-x86_64",
       "priority": 10,
       "artifact": {
-        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r0/whisper-1.8.4-linux-x64-cpu.tar.gz",
-        "sha256": "434e669eecba6383a3d802a03260d7ccc8835b05e8cc3fb1743ff7fa69367f07",
-        "size": 2275249
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/whisper-1.8.4-linux-x64-cpu.tar.gz",
+        "sha256": "d8e071588b140c99cec4e3b7391f92760ba6c7a92824f2a4fc8e628762752fe0",
+        "size": 2014150
       },
       "env": {}
     },
@@ -20,9 +20,9 @@
       "platform": "linux-x86_64",
       "priority": 20,
       "artifact": {
-        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r0/whisper-1.8.4-linux-x64-vulkan.tar.gz",
-        "sha256": "eee2ef9bbcd0521ace587005f3c37b4f8d8335e0ee2ab813c2a19224afd2cd90",
-        "size": 19622536
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/whisper-1.8.4-linux-x64-vulkan.tar.gz",
+        "sha256": "14a1e4a297324f0cd10721be853037428b20a7941a282ec86b4ddc10c8fd93bd",
+        "size": 19060055
       },
       "env": {}
     }
@@ -30,12 +30,22 @@
   "tools": [
     {
       "id": "ffmpeg-lgpl",
-      "platform": "linux-x86_64",
-      "version": "n9.0",
+      "platform": "windows-x86_64",
+      "version": "n7.1",
       "artifact": {
-        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r0/ffmpeg-lgpl-linux64.tar.gz",
-        "sha256": "b12dbfe855c09b283d899e05f9434c5f7fe704d3ea6face3191ac5f3beacd9c5",
-        "size": 60607081
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/ffmpeg-lgpl-win64.zip",
+        "sha256": "240555aec42bccd15664d2020a03b0bb9c77b5264bf1ebe12d4464bca66680a6",
+        "size": 57200559
+      }
+    },
+    {
+      "id": "ffmpeg-lgpl",
+      "platform": "linux-x86_64",
+      "version": "n7.1",
+      "artifact": {
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r1/ffmpeg-lgpl-linux64.tar.gz",
+        "sha256": "5c9aba43897166182baa32fe6743430ea0c7e7510feb785e97cb8fb75c7403be",
+        "size": 60607179
       }
     }
   ],
@@ -47,6 +57,42 @@
       "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
       "size": 147951465,
       "vramMb": 640,
+      "multilingual": true
+    },
+    {
+      "id": "small",
+      "file": "ggml-small.bin",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+      "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b",
+      "size": 487601967,
+      "vramMb": 1024,
+      "multilingual": true
+    },
+    {
+      "id": "medium",
+      "file": "ggml-medium.bin",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin",
+      "sha256": "6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208",
+      "size": 1533763059,
+      "vramMb": 2560,
+      "multilingual": true
+    },
+    {
+      "id": "large-v3-turbo",
+      "file": "ggml-large-v3-turbo.bin",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "size": 1624555275,
+      "vramMb": 3072,
+      "multilingual": true
+    },
+    {
+      "id": "large-v3",
+      "file": "ggml-large-v3.bin",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin",
+      "sha256": "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2",
+      "size": 3095033483,
+      "vramMb": 5120,
       "multilingual": true
     }
   ]
