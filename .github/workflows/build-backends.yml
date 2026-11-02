@@ -172,21 +172,37 @@ jobs:
             --channel "${{ github.event.inputs.channel || 'stable' }}" \
             --out release/catalog.json
 
-      - name: Sign catalogue
+      - name: Sign catalogue (Ed25519)
         env:
-          MINISIGN_SECRET: ${{ secrets.MINISIGN_SECRET_KEY }}
+          CATALOG_SIGNING_KEY: ${{ secrets.CATALOG_SIGNING_KEY }}
+          # Public: must match crates/wd-core/src/trust.rs
+          CATALOG_PUBLIC_KEY: yTr7vAs25nvtFhPwfGeaoLXcezMl+eqNoSMASXvm6cE=
         run: |
-          sudo apt-get update && sudo apt-get install -y minisign
-          printf '%s' "$MINISIGN_SECRET" | base64 -d > /tmp/minisign.key
-          minisign -S -s /tmp/minisign.key -m release/catalog.json -x release/catalog.json.minisig
-          rm -f /tmp/minisign.key
-          cat release/catalog.json.minisig
+          set -euo pipefail
+          printf '%s' "$CATALOG_SIGNING_KEY" | base64 -d > /tmp/catalog.key
+          node scripts/trust.mjs sign --key /tmp/catalog.key \
+            --in release/catalog.json --out release/catalog.json.sig
+          rm -f /tmp/catalog.key
+          node scripts/trust.mjs verify --pub "$CATALOG_PUBLIC_KEY" \
+            --in release/catalog.json --sig release/catalog.json.sig
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete "$GITHUB_REF_NAME" --yes 2>/dev/null || true
-          gh release create "$GITHUB_REF_NAME" release/* \
+          gh release create "$GITHUB_REF_NAME" release/* release/catalog.json.sig \
             --title "Backends $GITHUB_REF_NAME" \
             --notes "whisper.cpp ${WHISPER_VERSION} · ffmpeg ${FFMPEG_TAG} · canal ${{ github.event.inputs.channel || 'stable' }}"
+
+      # The app reads this URL first; keep it in sync with the release.
+      - name: Publish catalogue for the app
+        run: |
+          set -euo pipefail
+          cp release/catalog.json docs/catalog.json
+          cp release/catalog.json.sig docs/catalog.json.sig
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/catalog.json docs/catalog.json.sig
+          git diff --cached --quiet || git commit -m "chore: catálogo firmado desde $GITHUB_REF_NAME"
+          git push

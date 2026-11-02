@@ -6,6 +6,7 @@
 
 pub mod bench;
 pub mod catalog;
+pub mod catalog_source;
 pub mod cli;
 pub mod config;
 pub mod decide;
@@ -23,6 +24,7 @@ pub mod paths;
 pub mod relocate;
 pub mod system;
 pub mod transcriber;
+pub mod trust;
 pub mod verify;
 
 pub use decide::{plan, BackendId, InstallPlan, ModelVariant};

@@ -13,8 +13,9 @@ build-backends.yml
   ├─ ffmpeg-lgpl (repack de BtbN, solo el binario)
   └─ catalog:
        ├─ make-catalog.mjs   (hashes reales, valida como la app)
-       ├─ minisign          (firma catalog.json)
-       └─ gh release create (tag backends-rX)
+       ├─ trust.mjs sign     (Ed25519 sobre catalog.json)
+       ├─ gh release create  (tag backends-rX)
+       └─ docs/catalog.json  (copia para GitHub Pages, URL estable)
 ```
 
 `scripts/make-catalog.mjs` **hashea los archivos él mismo**. Nunca se escriben
@@ -24,20 +25,22 @@ hashes a mano: es el error que rompe instalaciones en silencio.
 
 ### 1. Claves de firma
 
-```bash
-minisign -G -p minisign.pub -s minisign.key
-```
-
-- `minisign.pub` es **público**: se copia tal cual a `crates/wd-core/src/trust.rs`
-  (pendiente, se añade cuando exista la primera release).
-- `minisign.key` es **secreto**: nunca se sube al repo.
-
-Guárdalo como secret del repositorio, codificado en base64 para que sobreviva
-a saltos de línea:
+Se usa **Ed25519** con `node:crypto`: no hace falta instalar nada.
 
 ```bash
-base64 -w0 minisign.key | gh secret set MINISIGN_SECRET_KEY
+node scripts/trust.mjs keygen --out-dir ./keys
 ```
+
+- `keys/catalog.pub` es **pública**: va en `crates/wd-core/src/trust.rs`
+  (`CATALOG_PUBLIC_KEY`) y en el workflow.
+- `keys/catalog.key` es **privada**: nunca se sube al repo.
+
+```bash
+base64 -w0 keys/catalog.key | gh secret set CATALOG_SIGNING_KEY
+```
+
+Cambiar de clave obliga a publicar una versión nueva de la app: la clave va
+compilada dentro y es lo que impide que nadie sustituya los binarios.
 
 ### 2. Hashes de los modelos
 
@@ -81,7 +84,8 @@ node scripts/make-catalog.mjs --artifacts dist --repo TuxArchi/whisper-desktop \
   --release backends-r1 --out /tmp/check.json
 
 # 2. La firma es válida
-minisign -V -p minisign.pub -m dist/catalog.json
+node scripts/trust.mjs verify --pub "$(cat keys/catalog.pub)" \
+  --in dist/catalog.json --sig dist/catalog.json.sig
 
 # 3. Los binarios arrancan (en una máquina de cada tipo)
 ./whisper-cli --help

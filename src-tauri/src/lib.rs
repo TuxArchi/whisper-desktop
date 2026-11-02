@@ -12,9 +12,15 @@ use wd_core::installer::{install, InstallEvent, InstallRequest};
 use wd_core::manifest::Manifest;
 use wd_core::paths::{self, AppPaths};
 
-/// Embedded for now. Phase 3 replaces it with a signed download of
-/// `catalog.json` from GitHub Releases.
+/// Stable URL served by GitHub Pages, then the release that published it.
+const CATALOG_URLS: &[&str] = &[
+    "https://tuxarchi.github.io/whisper-desktop/catalog.json",
+    "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r0/catalog.json",
+];
+
+/// Last resort when there is no network and no cache. Still verified.
 const EMBEDDED_CATALOG: &str = include_str!("../../catalog/catalog.json");
+const EMBEDDED_SIGNATURE: &str = include_str!("../../catalog/catalog.json.sig");
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,7 +64,24 @@ fn resolved_paths() -> AppPaths {
 }
 
 fn load_catalog() -> Result<Catalog, String> {
-    Catalog::parse(EMBEDDED_CATALOG).map_err(|error| format!("catálogo inválido: {error}"))
+    let cache_dir = resolved_paths().data.join("cache");
+    let urls: Vec<String> = CATALOG_URLS.iter().map(|url| url.to_string()).collect();
+
+    match wd_core::catalog_source::load(
+        &wd_core::catalog_source::HttpTextFetcher,
+        &urls,
+        &cache_dir,
+    ) {
+        Ok(loaded) => Ok(loaded.catalog),
+        Err(remote_error) => {
+            // Offline or hosting broken: fall back to the copy compiled into
+            // the binary, which is signed with the same key.
+            match wd_core::catalog_source::verify_and_parse(EMBEDDED_CATALOG, EMBEDDED_SIGNATURE) {
+                Ok(catalog) => Ok(catalog),
+                Err(_) => Err(format!("no se pudo obtener el catálogo: {remote_error}")),
+            }
+        }
+    }
 }
 
 #[tauri::command]
@@ -91,7 +114,20 @@ fn build_plan() -> wd_core::InstallPlan {
 }
 
 #[tauri::command]
-fn catalog_status() -> CatalogStatus {
+async fn catalog_status() -> CatalogStatus {
+    // Fetching can take seconds; never block the UI thread.
+    tauri::async_runtime::spawn_blocking(catalog_status_blocking)
+        .await
+        .unwrap_or_else(|error| CatalogStatus {
+            ok: false,
+            backends: 0,
+            models: 0,
+            errors: vec![error.to_string()],
+            notes: Vec::new(),
+        })
+}
+
+fn catalog_status_blocking() -> CatalogStatus {
     match load_catalog() {
         Ok(catalog) => {
             let errors = catalog.validate(env!("CARGO_PKG_VERSION"));

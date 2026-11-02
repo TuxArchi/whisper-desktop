@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "channel": "test",
+  "backends": [
+    {
+      "id": "cpu",
+      "platform": "linux-x86_64",
+      "priority": 10,
+      "artifact": { "url": "https://example.com/cpu.tar.gz", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "size": 10 }
+    }
+  ],
+  "tools": [],
+  "models": []
+}
