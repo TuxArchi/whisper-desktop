@@ -24,6 +24,9 @@ cmake -B build -G "Visual Studio 17 2022" -A x64 `
     -DBUILD_SHARED_LIBS=ON `
     -DWHISPER_BUILD_TESTS=OFF `
     -DWHISPER_BUILD_EXAMPLES=ON `
+    -DGGML_NATIVE=OFF `
+    -DGGML_CPU_ALL_VARIANTS=ON `
+    -DGGML_BACKEND_DL=ON `
     @flags
 if ($LASTEXITCODE -ne 0) { throw "cmake configure falló" }
 

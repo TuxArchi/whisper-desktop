@@ -92,6 +92,8 @@ export default function Wizard({
     return vram > 0 && selectedVram() > vram;
   }, [gpuVram, selectedVram]);
 
+  // `selectedModel` must be a dependency: without it the callback keeps the
+  // value from the first render and always installs the recommended model.
   const startInstall = useCallback(async () => {
     setStep("installing");
     setInstallError(null);
@@ -151,7 +153,7 @@ export default function Wizard({
     } finally {
       unlisten?.();
     }
-  }, []);
+  }, [selectedModel]);
 
   return (
     <div className="wizard">
