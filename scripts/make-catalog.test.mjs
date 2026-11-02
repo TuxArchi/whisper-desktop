@@ -142,9 +142,8 @@ test("rejects insecure URLs", () => {
   assert.match(validateCatalog(catalog)[0], /HTTPS/);
 });
 
-test("the checked-in development catalogue is invalid by design", () => {
+test("the checked-in catalogue passes the same validation as the app", () => {
   const raw = readFileSync(join(import.meta.dirname, "..", "catalog", "catalog.json"), "utf8");
   const catalog = JSON.parse(raw);
-  const errors = validateCatalog(catalog);
-  assert.ok(errors.length > 0, "los placeholders deben ser rechazados");
+  assert.deepEqual(validateCatalog(catalog), []);
 });

@@ -96,6 +96,7 @@ export interface CatalogStatus {
   backends: number;
   models: number;
   errors: string[];
+  notes: Reason[];
 }
 
 export type InstallEvent =

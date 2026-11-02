@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "channel": "stable",
-  "generated": "2026-11-02T02:24:02.689Z",
+  "generated": "2026-11-02T02:29:47.637Z",
   "minAppVersion": "0.1.0",
   "backends": [
     {
@@ -12,6 +12,17 @@
         "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r0/whisper-1.8.4-linux-x64-cpu.tar.gz",
         "sha256": "72e89d004e1e4f426780b777dee91b76dc769ee353374d09569e131dc0a41946",
         "size": 1333506
+      },
+      "env": {}
+    },
+    {
+      "id": "vulkan",
+      "platform": "linux-x86_64",
+      "priority": 20,
+      "artifact": {
+        "url": "https://github.com/TuxArchi/whisper-desktop/releases/download/backends-r0/whisper-1.8.4-linux-x64-vulkan.tar.gz",
+        "sha256": "c82bcf346ef0ec237500b7790b53731de6a84a44407041206fe714dae04dab72",
+        "size": 1398444
       },
       "env": {}
     }

@@ -237,14 +237,29 @@ mod tests {
     }
 
     #[test]
-    fn development_catalog_is_rejected_but_parses() {
-        let raw = include_str!("../../../catalog/catalog.json");
-        let catalog = Catalog::parse(raw).expect("el catálogo de desarrollo debe parsear");
+    fn placeholder_catalog_is_rejected() {
+        let raw = r#"{
+            "schema": 1,
+            "backends": [{
+                "id": "cpu",
+                "platform": "linux-x86_64",
+                "artifact": { "url": "https://example.com/a.zip", "sha256": "PENDING", "size": 0 }
+            }]
+        }"#;
+        let catalog = Catalog::parse(raw).expect("parsea");
         let errors = catalog.validate("0.1.0");
         assert!(!errors.is_empty(), "los placeholders deben rechazarse");
+    }
+
+    #[test]
+    fn shipped_catalog_is_valid() {
+        let raw = include_str!("../../../catalog/catalog.json");
+        let catalog = Catalog::parse(raw).expect("el catálogo del repo debe parsear");
+        let errors = catalog.validate("0.1.0");
+        assert!(errors.is_empty(), "errores: {errors:?}");
         assert!(catalog
-            .backend(BackendId::Vulkan, Platform::WindowsX64)
+            .backend(BackendId::Cpu, Platform::LinuxX64)
             .is_some());
-        assert!(catalog.model("large-v3-turbo").is_some());
+        assert!(catalog.model("base").is_some());
     }
 }

@@ -6,7 +6,7 @@
 
 use crate::catalog::{Catalog, Platform};
 use crate::config::Config;
-use crate::decide::InstallPlan;
+use crate::decide::{BackendId, InstallPlan};
 use crate::download::Fetcher;
 use crate::extract::{self, clear_dir};
 use crate::manifest::Manifest;
@@ -145,6 +145,67 @@ pub fn install<F: Fetcher>(
     std::fs::remove_dir_all(&cache).ok();
     emit(InstallEvent::Finished);
     Ok(manifest)
+}
+
+/// The decision engine knows the hardware; the catalogue knows what has been
+/// published. They drift (a Windows-only build, a model not released yet), so
+/// the installer adapts instead of failing with "missing artifact".
+pub struct PlanFit {
+    pub plan: InstallPlan,
+    pub notes: Vec<crate::hardware::Reason>,
+}
+
+pub fn fit_plan_to_catalog(plan: &InstallPlan, catalog: &Catalog, platform: Platform) -> PlanFit {
+    let mut adjusted = plan.clone();
+    let mut notes = Vec::new();
+
+    if catalog.backend(plan.backend, platform).is_none() {
+        let replacement = std::iter::once(plan.backend)
+            .chain(plan.fallbacks.iter().copied())
+            .find(|candidate| catalog.backend(*candidate, platform).is_some())
+            .or_else(|| {
+                catalog
+                    .backends
+                    .iter()
+                    .filter(|backend| backend.platform == platform)
+                    .max_by_key(|backend| backend.priority)
+                    .and_then(|backend| match backend.id.as_str() {
+                        "cpu" => Some(BackendId::Cpu),
+                        "cuda" => Some(BackendId::Cuda),
+                        "vulkan" => Some(BackendId::Vulkan),
+                        "rocm" => Some(BackendId::Rocm),
+                        _ => None,
+                    })
+            });
+
+        if let Some(backend) = replacement {
+            adjusted.backend = backend;
+            adjusted.fallbacks.retain(|candidate| {
+                *candidate != backend && catalog.backend(*candidate, platform).is_some()
+            });
+            notes.push(
+                crate::hardware::Reason::new("catalog.backend_fallback")
+                    .arg("wanted", plan.backend.as_str())
+                    .arg("used", backend.as_str()),
+            );
+        }
+    }
+
+    if catalog.model(&plan.model).is_none() {
+        if let Some(model) = catalog.models.iter().max_by_key(|model| model.size) {
+            adjusted.model = model.id.clone();
+            notes.push(
+                crate::hardware::Reason::new("catalog.model_fallback")
+                    .arg("wanted", plan.model.clone())
+                    .arg("used", model.id.clone()),
+            );
+        }
+    }
+
+    PlanFit {
+        plan: adjusted,
+        notes,
+    }
 }
 
 fn file_name_from_url(url: &str) -> String {
@@ -338,5 +399,106 @@ mod tests {
         // A URL without a file name falls back to a safe default.
         assert_eq!(file_name_from_url("https://a/b/"), "artifact.bin");
         assert_eq!(file_name_from_url("nonsense"), "nonsense");
+    }
+    #[test]
+    fn adapts_plan_to_published_catalog() {
+        use crate::catalog::{Artifact, CatalogBackend, CatalogModel};
+        use crate::decide::{BackendId, ModelVariant};
+
+        let catalog = Catalog {
+            schema: 1,
+            channel: "test".into(),
+            min_app_version: None,
+            backends: vec![CatalogBackend {
+                id: "cpu".into(),
+                platform: Platform::LinuxX64,
+                priority: 10,
+                artifact: Artifact {
+                    url: "https://example.com/cpu.tar.gz".into(),
+                    sha256: "a".repeat(64),
+                    size: 10,
+                },
+                env: Default::default(),
+            }],
+            tools: vec![],
+            models: vec![CatalogModel {
+                id: "base".into(),
+                file: "ggml-base.bin".into(),
+                url: "https://example.com/ggml-base.bin".into(),
+                sha256: "b".repeat(64),
+                size: 100,
+                vram_mb: 640,
+                multilingual: true,
+            }],
+        };
+
+        let plan = InstallPlan {
+            backend: BackendId::Vulkan,
+            fallbacks: vec![BackendId::Cpu],
+            model: "large-v3-turbo".into(),
+            variant: ModelVariant::Fp16,
+            threads: 8,
+            reasons: vec![],
+            warnings: vec![],
+        };
+
+        let fit = fit_plan_to_catalog(&plan, &catalog, Platform::LinuxX64);
+        assert_eq!(fit.plan.backend, BackendId::Cpu);
+        assert_eq!(fit.plan.model, "base");
+        assert!(fit
+            .plan
+            .fallbacks
+            .iter()
+            .all(|candidate| *candidate != BackendId::Cpu));
+        assert_eq!(fit.notes.len(), 2);
+        assert_eq!(fit.notes[0].code, "catalog.backend_fallback");
+        assert_eq!(fit.notes[1].code, "catalog.model_fallback");
+    }
+
+    #[test]
+    fn leaves_a_matching_plan_untouched() {
+        use crate::catalog::{Artifact, CatalogBackend, CatalogModel};
+        use crate::decide::{BackendId, ModelVariant};
+
+        let catalog = Catalog {
+            schema: 1,
+            channel: "test".into(),
+            min_app_version: None,
+            backends: vec![CatalogBackend {
+                id: "vulkan".into(),
+                platform: Platform::LinuxX64,
+                priority: 20,
+                artifact: Artifact {
+                    url: "https://example.com/vk.tar.gz".into(),
+                    sha256: "c".repeat(64),
+                    size: 10,
+                },
+                env: Default::default(),
+            }],
+            tools: vec![],
+            models: vec![CatalogModel {
+                id: "large-v3-turbo".into(),
+                file: "ggml-large-v3-turbo.bin".into(),
+                url: "https://example.com/m.bin".into(),
+                sha256: "d".repeat(64),
+                size: 100,
+                vram_mb: 3072,
+                multilingual: true,
+            }],
+        };
+
+        let plan = InstallPlan {
+            backend: BackendId::Vulkan,
+            fallbacks: vec![BackendId::Cpu],
+            model: "large-v3-turbo".into(),
+            variant: ModelVariant::Fp16,
+            threads: 8,
+            reasons: vec![],
+            warnings: vec![],
+        };
+
+        let fit = fit_plan_to_catalog(&plan, &catalog, Platform::LinuxX64);
+        assert_eq!(fit.plan, plan);
+        assert!(fit.notes.is_empty());
     }
 }

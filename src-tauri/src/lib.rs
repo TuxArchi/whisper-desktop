@@ -34,6 +34,8 @@ struct CatalogStatus {
     backends: usize,
     models: usize,
     errors: Vec<String>,
+    /// Differences between what the hardware suggests and what is published.
+    notes: Vec<wd_core::Reason>,
 }
 
 #[derive(Debug, Serialize)]
@@ -93,11 +95,17 @@ fn catalog_status() -> CatalogStatus {
     match load_catalog() {
         Ok(catalog) => {
             let errors = catalog.validate(env!("CARGO_PKG_VERSION"));
+            let fit = wd_core::installer::fit_plan_to_catalog(
+                &wd_core::plan(&wd_core::detect::detect()),
+                &catalog,
+                Platform::current(),
+            );
             CatalogStatus {
                 ok: errors.is_empty(),
                 backends: catalog.backends.len(),
                 models: catalog.models.len(),
                 errors,
+                notes: fit.notes,
             }
         }
         Err(error) => CatalogStatus {
@@ -105,6 +113,7 @@ fn catalog_status() -> CatalogStatus {
             backends: 0,
             models: 0,
             errors: vec![error],
+            notes: Vec::new(),
         },
     }
 }
@@ -129,7 +138,13 @@ fn install_blocking(app: &tauri::AppHandle) -> Result<Manifest, String> {
     }
 
     let report = wd_core::detect::detect();
-    let plan = wd_core::plan(&report);
+    // Install what the catalogue actually publishes, not what we wish it did.
+    let fit = wd_core::installer::fit_plan_to_catalog(
+        &wd_core::plan(&report),
+        &catalog,
+        Platform::current(),
+    );
+    let plan = fit.plan;
 
     let request = InstallRequest {
         plan: &plan,

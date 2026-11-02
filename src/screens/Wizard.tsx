@@ -253,6 +253,17 @@ export default function Wizard({
             </section>
           )}
 
+          {catalog && catalog.notes.length > 0 && (
+            <section className="card warn">
+              <h3>El catálogo publica algo distinto</h3>
+              <ul>
+                {catalog.notes.map((note) => (
+                  <li key={note.code + JSON.stringify(note.args)}>{formatReason(note)}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {installError && <div className="banner danger pre">{installError}</div>}
 
           <section className="actions">

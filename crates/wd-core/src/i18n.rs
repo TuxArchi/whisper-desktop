@@ -161,6 +161,36 @@ pub fn render(reason: &Reason, lang: Lang) -> String {
                 )
             }
         }
+        "catalog.backend_fallback" => {
+            if es {
+                format!(
+                    "El catálogo no publica el motor {}; se instalará {}",
+                    arg(reason, "wanted"),
+                    arg(reason, "used")
+                )
+            } else {
+                format!(
+                    "The catalogue does not publish the {} engine; installing {}",
+                    arg(reason, "wanted"),
+                    arg(reason, "used")
+                )
+            }
+        }
+        "catalog.model_fallback" => {
+            if es {
+                format!(
+                    "El modelo recomendado ({}) no está publicado; se instalará {}",
+                    arg(reason, "wanted"),
+                    arg(reason, "used")
+                )
+            } else {
+                format!(
+                    "The recommended model ({}) is not published; installing {}",
+                    arg(reason, "wanted"),
+                    arg(reason, "used")
+                )
+            }
+        }
         "warn.wsl" => {
             if es {
                 "Estás en WSL: la GPU del equipo anfitrión no es accesible desde aquí".to_string()

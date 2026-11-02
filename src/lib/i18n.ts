@@ -42,6 +42,10 @@ export function formatReason(reason: Reason): string {
       return "GPU NVIDIA detectada pero nvidia-smi no responde: falta el driver";
     case "warn.rocm_no_kfd":
       return "ROCm no accesible (/dev/kfd). Añade tu usuario a render y video, y reinicia sesión";
+    case "catalog.backend_fallback":
+      return `El catálogo no publica el motor ${a.wanted}; se instalará ${a.used}`;
+    case "catalog.model_fallback":
+      return `El modelo recomendado (${a.wanted}) no está publicado; se instalará ${a.used}`;
     case "warn.vram_unknown":
       return "No se pudo leer la VRAM; se elige un modelo conservador";
     default:
