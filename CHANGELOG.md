@@ -25,6 +25,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 
 ### Añadido
 
+- `.deb` y `.rpm` generados desde el binario compilado, con scripts que usan
+  contenedores cuando la herramienta nativa no está disponible.
+- Verificados instalándolos en limpio: Ubuntu 24.04 (apt resuelve dependencias)
+  y Fedora 44 (dnf), y ejecutando `whisper-desktop --version` en ambos.
+
+
 - Instalador universal `.run` para Linux: sin root, instala en `~/.local/share`,
   crea menú, icono y comando, y se desinstala con `--uninstall`.
 - Paquete de Arch `.pkg.tar.zst` generado desde el binario del release.

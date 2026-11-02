@@ -51,9 +51,20 @@ pnpm tauri dev
 | Objetivo | Comando |
 |---|---|
 | Windows (ZIP portable) | `npm run tauri build -- --no-bundle` + `scripts/package-windows.ps1` |
-| Linux `.deb` / `.rpm` | `npm run tauri build -- --bundles deb,rpm` |
+| Linux `.deb` / `.rpm` (CI) | `npm run tauri build -- --bundles deb,rpm` |
+| Linux `.deb` / `.rpm` (local) | `scripts/make-deb.sh` · `scripts/make-rpm.sh` |
 | Arch `.pkg.tar.zst` | `scripts/make-arch-package.sh src-tauri/target/release 0.1.0 release` |
 | `.run` universal | `scripts/make-run.sh <stage> <version> release` |
+
+En CI, `.deb` y `.rpm` los genera el bundler de Tauri sobre Ubuntu 22.04: calcula
+las dependencias con `dpkg-shlibdeps` y fija glibc 2.35. Los scripts
+`make-deb.sh` / `make-rpm.sh` existen para empaquetar un binario ya compilado
+desde una máquina que no es Debian ni Fedora (usan contenedores si falta la
+herramienta nativa).
+
+> El binario hereda la glibc del sistema donde se compiló. Compilado en Arch
+> (glibc 2.44) exige **glibc ≥ 2.39**; compilado en Ubuntu 22.04 baja a 2.35,
+> que cubre Ubuntu 22.04+, Debian 12+ y Fedora 36+.)
 
 El `.run` y el paquete de Arch necesitan un binario ya compilado:
 
