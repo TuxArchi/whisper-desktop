@@ -28,6 +28,14 @@ esac
 
 echo "== whisper.cpp ${version} · backend ${backend} =="
 
+# Extra CMake flags for cases that need them (CUDA VMM, custom toolchains).
+extra=()
+if [ -n "${EXTRA_CMAKE_ARGS:-}" ]; then
+    # Word splitting is intended here.
+    # shellcheck disable=SC2206
+    extra=(${EXTRA_CMAKE_ARGS})
+fi
+
 cmake -B build \
   -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_SHARED_LIBS=ON \
@@ -35,7 +43,8 @@ cmake -B build \
   -DWHISPER_BUILD_EXAMPLES=ON \
   -DCMAKE_INSTALL_RPATH='$ORIGIN' \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
-  "${flags[@]}"
+  "${flags[@]}" \
+  "${extra[@]}"
 
 cmake --build build -j"$(nproc)"
 

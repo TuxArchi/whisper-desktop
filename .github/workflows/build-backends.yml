@@ -98,10 +98,10 @@ jobs:
       - name: Build
         working-directory: whisper.cpp
         run: |
-          # The devel image ships the driver stub but the linker does not look
-          # there, so every cuMem*/cuDevice* symbol stays undefined.
-          ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /usr/lib/x86_64-linux-gnu/libcuda.so
-          ldconfig
+          # ggml uses the CUDA driver API (cuMem*), which is not part of the
+          # toolkit the image links against. VMM is an optimisation; disabling
+          # it removes the dependency entirely.
+          export EXTRA_CMAKE_ARGS="-DGGML_CUDA_NO_VMM=ON"
           bash ../scripts/build-backend.sh cuda "$WHISPER_VERSION" ../release
 
       - uses: actions/upload-artifact@v4
@@ -129,8 +129,10 @@ jobs:
       - name: Build
         working-directory: whisper.cpp
         run: |
-          # CMake cannot find HIP unless the toolchain is on PATH.
+          # CMake needs both the toolchain on PATH and the ROCm root.
           export PATH="/opt/rocm/bin:/opt/rocm/llvm/bin:${PATH}"
+          export ROCM_PATH=/opt/rocm
+          export HIP_PATH=/opt/rocm
           bash ../scripts/build-backend.sh rocm "$WHISPER_VERSION" ../release
 
       - uses: actions/upload-artifact@v4
