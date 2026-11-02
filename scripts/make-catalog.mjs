@@ -10,6 +10,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const HEX64 = /^[0-9a-f]{64}$/;
 
@@ -202,7 +203,9 @@ function main() {
   );
 }
 
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+// `file://${path}` breaks with spaces and non-ASCII characters; the
+// URL form handles both.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     main();
   } catch (error) {
