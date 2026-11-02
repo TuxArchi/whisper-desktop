@@ -4438,7 +4438,7 @@ dependencies = [
 
 [[package]]
 name = "wd-core"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -4582,7 +4582,7 @@ dependencies = [
 
 [[package]]
 name = "whisper-desktop"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "libc",
  "serde",
