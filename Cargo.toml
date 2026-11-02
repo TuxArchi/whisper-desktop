@@ -6,7 +6,7 @@ members = ["crates/wd-core", "crates/wd-cli"]
 exclude = ["src-tauri"]
 
 [workspace.package]
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 rust-version = "1.75"
 license = "MIT"
