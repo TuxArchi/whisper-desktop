@@ -3,6 +3,21 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 [SemVer](https://semver.org/lang/es/).
 
+## [0.1.3] - 2026-11-02
+
+### Añadido
+
+- `packaging/licenses/` con la LGPL v3 de ffmpeg, la oferta de código fuente y el
+  MIT de whisper.cpp.
+- `NOTICES.md` generado (`scripts/make-notices.mjs`): 110 dependencias, 37 textos
+  únicos.
+- Las licencias viajan en `.deb`, `.rpm`, `.pkg.tar.zst`, `.run` y el ZIP.
+- Enlace de Ko-fi en la web, el README y `.github/FUNDING.yml`.
+
+### Corregido
+
+- `THIRD-PARTY.md` apuntaba a archivos que no existían.
+
 ## [0.1.2] - 2026-11-02
 
 ### Corregido
