@@ -151,6 +151,10 @@ jobs:
           chown -R builder:builder /home/builder/src
           VERSION="${GITHUB_REF_NAME#v}"
           su builder -c "cd /home/builder/src && ./scripts/make-arch-package.sh bin $VERSION release"
+          # The build happens in /home/builder, outside the workspace that
+          # upload-artifact reads from.
+          mkdir -p release
+          cp /home/builder/src/release/*.pkg.tar.zst release/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -173,6 +177,8 @@ jobs:
       - name: Checksums
         run: |
           cd dist
+          # The raw binary is only shared between jobs, not for download.
+          rm -f whisper-desktop
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
