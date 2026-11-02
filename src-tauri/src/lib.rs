@@ -279,6 +279,54 @@ fn integration_options() -> Option<wd_core::system::IntegrationOptions> {
     Some(options)
 }
 
+/// Handles invocations that must not open a window. Returns the exit code in
+/// that case, or `None` when the GUI should start.
+pub fn handle_cli(args: &[String]) -> Option<i32> {
+    if args.iter().any(|arg| arg == "--detect-only") {
+        return Some(wd_core::cli::run_code(args.to_vec()));
+    }
+    if args.iter().any(|arg| arg == "--version" || arg == "-V") {
+        println!("Whisper Desktop {}", env!("CARGO_PKG_VERSION"));
+        return Some(0);
+    }
+    if args.iter().any(|arg| arg == "--integrate") {
+        return Some(run_integration(true));
+    }
+    if args.iter().any(|arg| arg == "--unintegrate") {
+        return Some(run_integration(false));
+    }
+    None
+}
+
+fn run_integration(install: bool) -> i32 {
+    let Ok(exe) = std::env::current_exe() else {
+        eprintln!("no se pudo resolver la ruta del ejecutable");
+        return 1;
+    };
+
+    let mut options = wd_core::system::IntegrationOptions::new("Whisper Desktop", exe);
+    options.create_desktop_shortcut = true;
+
+    let report = if install {
+        wd_core::system::integrate(&options)
+    } else {
+        wd_core::system::unintegrate(&options)
+    };
+
+    for action in &report.actions {
+        println!("{action}");
+    }
+    for error in &report.errors {
+        eprintln!("{error}");
+    }
+
+    if report.errors.is_empty() {
+        0
+    } else {
+        1
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

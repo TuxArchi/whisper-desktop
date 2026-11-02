@@ -1,6 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // `--detect-only`, `--integrate` and friends never open a window: the
+    // `.run` installer and diagnostics depend on that.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(code) = whisper_desktop_lib::handle_cli(&args) {
+        std::process::exit(code);
+    }
+
     // If the ZIP ships a WebView2 Fixed Runtime, use it instead of whatever is
     // installed on the machine. This makes the archive work on restricted
     // Windows images where the evergreen runtime is missing or blocked.

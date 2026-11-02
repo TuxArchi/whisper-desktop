@@ -10,6 +10,12 @@ use crate::hardware::HardwareReport;
 use crate::i18n::{render, Lang};
 
 pub fn run(args: Vec<String>) -> ExitCode {
+    ExitCode::from(u8::try_from(run_code(args)).unwrap_or(1))
+}
+
+/// Same as [`run`] but returns a plain exit code, for binaries that need to
+/// decide between CLI and GUI.
+pub fn run_code(args: Vec<String>) -> i32 {
     let mut detect_only = false;
     let mut json = false;
     let mut fixture: Option<String> = None;
@@ -26,7 +32,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
                     Some(path) => fixture = Some(path.clone()),
                     None => {
                         eprintln!("--fixture necesita una ruta");
-                        return ExitCode::from(2);
+                        return 2;
                     }
                 }
             }
@@ -38,16 +44,16 @@ pub fn run(args: Vec<String>) -> ExitCode {
             }
             "--version" | "-V" => {
                 println!("whisper-desktop {}", env!("CARGO_PKG_VERSION"));
-                return ExitCode::SUCCESS;
+                return 0;
             }
             "--help" | "-h" => {
                 print_help();
-                return ExitCode::SUCCESS;
+                return 0;
             }
             other => {
                 eprintln!("argumento desconocido: {other}");
                 print_help();
-                return ExitCode::from(2);
+                return 2;
             }
         }
         index += 1;
@@ -55,7 +61,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
 
     if !detect_only {
         print_help();
-        return ExitCode::SUCCESS;
+        return 0;
     }
 
     let report = match fixture {
@@ -63,7 +69,7 @@ pub fn run(args: Vec<String>) -> ExitCode {
             Ok(report) => report,
             Err(message) => {
                 eprintln!("{message}");
-                return ExitCode::from(1);
+                return 1;
             }
         },
         None => crate::detect::detect(),
@@ -80,14 +86,14 @@ pub fn run(args: Vec<String>) -> ExitCode {
             Ok(text) => println!("{text}"),
             Err(error) => {
                 eprintln!("no se pudo serializar: {error}");
-                return ExitCode::from(1);
+                return 1;
             }
         }
     } else {
         print_human(&report, &install_plan, lang);
     }
 
-    ExitCode::SUCCESS
+    0
 }
 
 fn load_report(path: &str) -> Result<HardwareReport, String> {

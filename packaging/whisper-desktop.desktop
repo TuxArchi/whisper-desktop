@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Whisper Desktop
+Comment=Transcribe y traduce audio en local
+Exec=/usr/bin/whisper-desktop %F
+TryExec=/usr/bin/whisper-desktop
+Icon=whisper-desktop
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+MimeType=audio/*;video/*;
+StartupWMClass=WhisperDesktop

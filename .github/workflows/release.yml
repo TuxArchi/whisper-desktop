@@ -81,10 +81,84 @@ jobs:
             src-tauri/target/release/bundle/rpm/*.rpm
           if-no-files-found: error
 
+      - name: Share the raw binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bin
+          path: src-tauri/target/release/whisper-desktop
+
+  run-installer:
+    name: universal .run
+    runs-on: ubuntu-22.04
+    needs: linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-bin
+          path: bin
+
+      - name: Build installer
+        run: |
+          set -euo pipefail
+          mkdir -p stage
+          cp bin/whisper-desktop stage/
+          chmod +x stage/whisper-desktop
+          cp LICENSE THIRD-PARTY.md stage/
+          cp packaging/icons/256x256/whisper-desktop.png stage/
+          VERSION="${GITHUB_REF_NAME#v}"
+          bash scripts/make-run.sh stage "$VERSION" release
+
+      - name: Smoke test (sandboxed home)
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          HOME_DIR="$(mktemp -d)"
+          HOME="$HOME_DIR" ./release/WhisperDesktop-"$VERSION"-x64.run --help >/dev/null
+          tar -tzf <(tail -n +$(awk '/^exit 0$/{print NR+1; exit}' \
+            ./release/WhisperDesktop-"$VERSION"-x64.run) \
+            ./release/WhisperDesktop-"$VERSION"-x64.run) | grep -q whisper-desktop
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: run
+          path: release/*.run
+          if-no-files-found: error
+
+  arch:
+    name: arch package
+    runs-on: ubuntu-22.04
+    needs: linux
+    container: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-bin
+          path: bin
+
+      - name: Build package
+        run: |
+          set -euo pipefail
+          pacman -Syu --noconfirm --needed base-devel
+          useradd -m builder
+          cp -a . /home/builder/src
+          chown -R builder:builder /home/builder/src
+          VERSION="${GITHUB_REF_NAME#v}"
+          su builder -c "cd /home/builder/src && ./scripts/make-arch-package.sh bin $VERSION release"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: release/*.pkg.tar.zst
+          if-no-files-found: error
+
   publish:
     name: publish
     runs-on: ubuntu-22.04
-    needs: [windows, linux]
+    needs: [windows, linux, run-installer, arch]
     steps:
       - uses: actions/checkout@v4
 

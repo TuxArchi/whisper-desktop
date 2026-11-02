@@ -50,10 +50,22 @@ pnpm tauri dev
 
 | Objetivo | Comando |
 |---|---|
-| Windows (ZIP portable) | `pnpm tauri build` + script de empaquetado |
-| Linux `.deb` / `.rpm` | `pnpm tauri build --bundles deb,rpm` |
-| Arch `.pkg.tar.zst` | `cd packaging/aur && makepkg -s` |
-| `.run` universal | `scripts/build-run.sh` |
+| Windows (ZIP portable) | `npm run tauri build -- --no-bundle` + `scripts/package-windows.ps1` |
+| Linux `.deb` / `.rpm` | `npm run tauri build -- --bundles deb,rpm` |
+| Arch `.pkg.tar.zst` | `scripts/make-arch-package.sh src-tauri/target/release 0.1.0 release` |
+| `.run` universal | `scripts/make-run.sh <stage> <version> release` |
+
+El `.run` y el paquete de Arch necesitan un binario ya compilado:
+
+```bash
+cargo build --release --manifest-path src-tauri/Cargo.toml
+mkdir -p stage
+cp src-tauri/target/release/whisper-desktop LICENSE THIRD-PARTY.md stage/
+cp packaging/icons/256x256/whisper-desktop.png stage/
+bash scripts/make-run.sh stage 0.1.0 release
+```
+
+Ambos se prueban en el workflow con un `$HOME` temporal, sin tocar el sistema.
 
 ## Añadir un caso de hardware
 

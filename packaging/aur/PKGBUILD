@@ -1,43 +1,43 @@
 # Maintainer: Whisper Desktop contributors
-# Builds an Arch package from this repository. Published as a prebuilt
-# .pkg.tar.zst in GitHub Releases so users can install it from pamac/octopi
-# without touching a terminal.
+#
+# Prebuilt package: it installs the binary produced by the release workflow.
+# Building from source is possible but needs the full Rust + Node toolchain and
+# about 2 GB of build artifacts, which is not what a user wants when they
+# double-click a package.
+#
+# Local build:
+#   tar -czf whisper-desktop-$pkgver-x86_64.tar.gz -C <stage> .
+#   makepkg -f
+#
+# The release workflow does exactly that and uploads the .pkg.tar.zst.
 
 pkgname=whisper-desktop
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Local audio and video transcription with Whisper, with guided hardware setup"
+pkgdesc="Transcribe y traduce audio en local, con detección automática de hardware"
 arch=('x86_64')
 url="https://github.com/TuxArchi/whisper-desktop"
 license=('MIT')
-depends=('webkit2gtk-4.1' 'gtk3' 'openssl' 'librsvg')
-makedepends=('cargo' 'nodejs' 'pnpm')
-options=(!lto)
-source=()
-sha256sums=()
+depends=('webkit2gtk-4.1' 'gtk3' 'openssl' 'librsvg' 'hicolor-icon-theme')
+provides=('whisper-desktop')
+conflicts=('whisper-desktop')
+options=('!strip')  # the release binary is already stripped
 
-# The CI job checks out the tagged source tree and builds inside the archive,
-# so no remote source list is needed. Building locally:
-#   cd packaging/aur && makepkg -s
-
-build() {
-  cd "$srcdir/whisper-desktop-$pkgver"
-  pnpm install --frozen-lockfile
-  cargo build --release --locked
-}
+source=("whisper-desktop-$pkgver-x86_64.tar.gz")
+sha256sums=('SKIP')
 
 package() {
-  cd "$srcdir/whisper-desktop-$pkgver"
+    install -Dm755 "$srcdir/whisper-desktop" \
+        "$pkgdir/usr/bin/whisper-desktop"
 
-  install -Dm755 "target/release/whisper-desktop" \
-    "$pkgdir/usr/bin/whisper-desktop"
+    install -Dm644 "$srcdir/whisper-desktop.desktop" \
+        "$pkgdir/usr/share/applications/whisper-desktop.desktop"
 
-  install -Dm644 "packaging/whisper-desktop.desktop" \
-    "$pkgdir/usr/share/applications/whisper-desktop.desktop"
+    install -Dm644 "$srcdir/whisper-desktop.png" \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/whisper-desktop.png"
 
-  install -Dm644 "packaging/icons/256x256/whisper-desktop.png" \
-    "$pkgdir/usr/share/icons/hicolor/256x256/apps/whisper-desktop.png"
-
-  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-  install -Dm644 "THIRD-PARTY.md" "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY.md"
+    install -Dm644 "$srcdir/LICENSE" \
+        "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "$srcdir/THIRD-PARTY.md" \
+        "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY.md"
 }
